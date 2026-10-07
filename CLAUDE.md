@@ -28,6 +28,11 @@ There is no test runner configured yet.
 - **Fonts**: Geist and Geist Mono load through `next/font/google` in `app/layout.tsx` and are exposed as CSS variables on `<html>`.
 - **Import alias**: `@/*` maps to the repo root (there is no `src/` directory).
 - ESLint uses `eslint-config-next` core-web-vitals + typescript presets (`eslint.config.mjs`).
+- **TypeScript**
+
+## Skills
+
+Usa siempre /frontend-design para diseñar la interfaz de usuario.
 
 ## Spec-driven workflow
 
