@@ -19,7 +19,7 @@ export default function SalonPage() {
       <HallOfFame />
 
       <div style={{ textAlign: "center", marginTop: 32 }}>
-        <Link href="/" className="btn lg">
+        <Link href="/juegos" className="btn lg">
           VOLVER A LA BIBLIOTECA
         </Link>
       </div>
