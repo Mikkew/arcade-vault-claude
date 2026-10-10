@@ -1,6 +1,6 @@
 # SPEC 01 — MVP visual de Arcade Vault (5 pantallas)
 
-> **Estado:** Approved
+> **Estado:** Implemented
 > **Depende de:** ninguna (el tema global ya está en `app/globals.css` y `app/layout.tsx`)
 > **Fecha:** 2026-10-07
 > **Objetivo:** Portar a Next.js App Router las cinco pantallas de `resources/templates/` (biblioteca, detalle, reproductor, acceso y salón de la fama) como maqueta visual navegable con datos mock, sin ningún juego real.
@@ -126,25 +126,25 @@ Antes de escribir código, leer la guía de `node_modules/next/dist/docs/01-app/
 
 ## Criterios de aceptación
 
-- [ ] `npm run lint`, `npx tsc --noEmit` y `npm run build` terminan sin errores.
-- [ ] Existen las rutas `/`, `/juegos/[id]`, `/juegos/[id]/jugar`, `/acceso` y `/salon`, y todas cargan sin errores en la consola del navegador.
-- [ ] La biblioteca muestra 8 tarjetas con título, descripción, categoría y mejor puntuación.
-- [ ] Buscar "caida" deja una sola tarjeta; elegir la categoría "SHOOTER" deja exactamente 2.
-- [ ] Una búsqueda sin coincidencias muestra "NO HAY RESULTADOS".
-- [ ] Hacer clic en una tarjeta abre `/juegos/<id>` con la descripción larga y 10 filas de puntuaciones.
-- [ ] `/juegos/no-existe` y `/juegos/no-existe/jugar` devuelven 404.
-- [ ] En `/juegos/<id>`, "JUGAR AHORA" lleva a `/juegos/<id>/jugar` y "VOLVER AL VAULT" lleva a `/`.
-- [ ] En el reproductor la puntuación aumenta sola; "PAUSA" la detiene y muestra "EN PAUSA"; "REANUDAR" la reanuda.
-- [ ] "FIN" abre el modal con la puntuación final; "GUARDAR PUNTUACIÓN" muestra "PUNTUACIÓN GUARDADA_" y no escribe nada en `localStorage`.
-- [ ] "JUGAR DE NUEVO" reinicia puntuación, vidas y nivel; "SALIR" lleva a `/juegos/<id>`.
-- [ ] `/salon` muestra 8 tabs, un podio con 3 posiciones y una tabla de 12 filas; cambiar de tab cambia los datos.
-- [ ] `/salon` no muestra la fila "TU MEJOR MARCA".
-- [ ] `/acceso` alterna entre los dos tabs y el campo "Correo electrónico" solo aparece en "CREAR CUENTA".
-- [ ] Enviar el formulario de acceso o pulsar "JUGAR COMO INVITADO" lleva a `/` y `localStorage` queda vacío.
-- [ ] El `Nav` aparece en todas las pantallas, marca como activo "Biblioteca" en `/`, `/juegos/*` y "Salón de la Fama" en `/salon`, y siempre muestra "Iniciar Sesión".
-- [ ] Con ancho menor a 768 px el menú hamburguesa abre el panel lateral y el fondo lo cierra.
-- [ ] No hay errores de hidratación en la consola al cargar cada ruta.
-- [ ] Ningún componente usa `style` con colores ni tamaños nuevos que no existan en el template.
+- [X] `npm run lint`, `npx tsc --noEmit` y `npm run build` terminan sin errores.
+- [X] Existen las rutas `/`, `/juegos/[id]`, `/juegos/[id]/jugar`, `/acceso` y `/salon`, y todas cargan sin errores en la consola del navegador.
+- [X] La biblioteca muestra 8 tarjetas con título, descripción, categoría y mejor puntuación.
+- [X] Buscar "caida" deja una sola tarjeta; elegir la categoría "SHOOTER" deja exactamente 2.
+- [X] Una búsqueda sin coincidencias muestra "NO HAY RESULTADOS".
+- [X] Hacer clic en una tarjeta abre `/juegos/<id>` con la descripción larga y 10 filas de puntuaciones.
+- [X] `/juegos/no-existe` y `/juegos/no-existe/jugar` devuelven 404.
+- [X] En `/juegos/<id>`, "JUGAR AHORA" lleva a `/juegos/<id>/jugar` y "VOLVER AL VAULT" lleva a `/`.
+- [X] En el reproductor la puntuación aumenta sola; "PAUSA" la detiene y muestra "EN PAUSA"; "REANUDAR" la reanuda.
+- [X] "FIN" abre el modal con la puntuación final; "GUARDAR PUNTUACIÓN" muestra "PUNTUACIÓN GUARDADA_" y no escribe nada en `localStorage`.
+- [X] "JUGAR DE NUEVO" reinicia puntuación, vidas y nivel; "SALIR" lleva a `/juegos/<id>`.
+- [X] `/salon` muestra 8 tabs, un podio con 3 posiciones y una tabla de 12 filas; cambiar de tab cambia los datos.
+- [X] `/salon` no muestra la fila "TU MEJOR MARCA".
+- [X] `/acceso` alterna entre los dos tabs y el campo "Correo electrónico" solo aparece en "CREAR CUENTA".
+- [X] Enviar el formulario de acceso o pulsar "JUGAR COMO INVITADO" lleva a `/` y `localStorage` queda vacío.
+- [X] El `Nav` aparece en todas las pantallas, marca como activo "Biblioteca" en `/`, `/juegos/*` y "Salón de la Fama" en `/salon`, y siempre muestra "Iniciar Sesión".
+- [X] Con ancho menor a 768 px el menú hamburguesa abre el panel lateral y el fondo lo cierra.
+- [X] No hay errores de hidratación en la consola al cargar cada ruta.
+- [X] Ningún componente usa `style` con colores ni tamaños nuevos que no existan en el template.
 
 ---
 

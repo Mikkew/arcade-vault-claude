@@ -154,26 +154,26 @@ Antes de escribir código, leer en `node_modules/next/dist/docs/01-app/` la guí
 
 ## Criterios de aceptación
 
-- [ ] `npm run lint`, `npx tsc --noEmit` y `npm run build` terminan sin errores.
-- [ ] `/` muestra, en este orden: hero, "¿POR QUÉ ARCADE VAULT?", "JUEGOS DISPONIBLES AHORA", estadísticas, "ACTIVIDAD EN VIVO", "PRECIOS" y "¿LISTO PARA JUGAR?".
-- [ ] El hero muestra las 8 siluetas, el título en tres líneas ("EL ARCADE" / "CLÁSICO ESTÁ" / "DE VUELTA") y los botones "EXPLORAR JUEGOS" y "CREAR CUENTA".
-- [ ] "¿POR QUÉ ARCADE VAULT?" muestra 4 tarjetas, cada una con su icono.
-- [ ] "JUEGOS DISPONIBLES AHORA" muestra 6 tarjetas, las mismas que los 6 primeros elementos de `GAMES`.
-- [ ] Las estadísticas muestran 3 bloques ("12+", "MILES", "GLOBAL").
-- [ ] "ÚLTIMAS PUNTUACIONES" muestra 7 filas y "TOP JUGADORES · HOY" muestra 5, con las puntuaciones formateadas en `es-ES`.
-- [ ] La tarjeta de precios muestra "$0", 6 ventajas y 3 preguntas frecuentes.
-- [ ] Cada botón del home navega al destino de la tabla de navegación.
-- [ ] Hacer clic en una `MiniCard` abre `/juegos/<id>`.
-- [ ] Las secciones con `.reveal` quedan visibles tras hacer scroll hasta ellas.
-- [ ] Con `prefers-reduced-motion: reduce` las secciones `.reveal` son visibles sin animación.
-- [ ] `/juegos` muestra la biblioteca de la spec 01 (8 tarjetas; "SHOOTER" deja 2; búsqueda sin coincidencias muestra "NO HAY RESULTADOS").
-- [ ] "VOLVER AL VAULT" (detalle y modal del reproductor) y "VOLVER A LA BIBLIOTECA" (salón) llevan a `/juegos`.
-- [ ] El `Nav` marca "Inicio" solo en `/`, "Biblioteca" en `/juegos` y `/juegos/*`, y "Salón de la Fama" en `/salon`.
-- [ ] El `Nav` no muestra "Acerca de" y sigue mostrando "Iniciar Sesión".
-- [ ] El logo del `Nav` y el envío de `/acceso` llevan a `/`.
-- [ ] Con ancho menor a 768 px el home no tiene scroll horizontal y el menú móvil incluye "Inicio".
-- [ ] No hay errores de hidratación ni errores en la consola al cargar `/` y `/juegos`.
-- [ ] El home no escribe nada en `localStorage`.
+- [X] `npm run lint`, `npx tsc --noEmit` y `npm run build` terminan sin errores.
+- [X] `/` muestra, en este orden: hero, "¿POR QUÉ ARCADE VAULT?", "JUEGOS DISPONIBLES AHORA", estadísticas, "ACTIVIDAD EN VIVO", "PRECIOS" y "¿LISTO PARA JUGAR?".
+- [X] El hero muestra las 8 siluetas, el título en tres líneas ("EL ARCADE" / "CLÁSICO ESTÁ" / "DE VUELTA") y los botones "EXPLORAR JUEGOS" y "CREAR CUENTA".
+- [X] "¿POR QUÉ ARCADE VAULT?" muestra 4 tarjetas, cada una con su icono.
+- [X] "JUEGOS DISPONIBLES AHORA" muestra 6 tarjetas, las mismas que los 6 primeros elementos de `GAMES`.
+- [X] Las estadísticas muestran 3 bloques ("12+", "MILES", "GLOBAL").
+- [X] "ÚLTIMAS PUNTUACIONES" muestra 7 filas y "TOP JUGADORES · HOY" muestra 5, con las puntuaciones formateadas en `es-ES`.
+- [X] La tarjeta de precios muestra "$0", 6 ventajas y 3 preguntas frecuentes.
+- [X] Cada botón del home navega al destino de la tabla de navegación.
+- [X] Hacer clic en una `MiniCard` abre `/juegos/<id>`.
+- [X] Las secciones con `.reveal` quedan visibles tras hacer scroll hasta ellas.
+- [X] Con `prefers-reduced-motion: reduce` las secciones `.reveal` son visibles sin animación.
+- [X] `/juegos` muestra la biblioteca de la spec 01 (8 tarjetas; "SHOOTER" deja 2; búsqueda sin coincidencias muestra "NO HAY RESULTADOS").
+- [X] "VOLVER AL VAULT" (detalle y modal del reproductor) y "VOLVER A LA BIBLIOTECA" (salón) llevan a `/juegos`.
+- [X] El `Nav` marca "Inicio" solo en `/`, "Biblioteca" en `/juegos` y `/juegos/*`, y "Salón de la Fama" en `/salon`.
+- [X] El `Nav` no muestra "Acerca de" y sigue mostrando "Iniciar Sesión".
+- [X] El logo del `Nav` y el envío de `/acceso` llevan a `/`.
+- [X] Con ancho menor a 768 px el home no tiene scroll horizontal y el menú móvil incluye "Inicio".
+- [X] No hay errores de hidratación ni errores en la consola al cargar `/` y `/juegos`.
+- [X] El home no escribe nada en `localStorage`.
 
 ---
 
