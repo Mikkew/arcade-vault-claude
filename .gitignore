@@ -44,3 +44,16 @@ next-env.d.ts
 # playwright mcp output
 .playwright-mcp/
 !.playwright-mcp/.gitkeep
+
+# claude code local settings
+.claude/settings.local.json
+
+# supabase local
+supabase/.branches/
+supabase/.temp/
+
+# editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
