@@ -1,6 +1,6 @@
 # SPEC 07 — Tabla de juegos en Supabase
 
-> **Estado:** Draft
+> **Estado:** Implemented
 > **Depende de:** SPEC 04
 > **Fecha:** 2026-10-19
 > **Objetivo:** Mover el catálogo de juegos de `lib/games.ts` a una tabla `games` de Supabase, sembrada con los 8 juegos actuales, y que la biblioteca, el detalle, la página de juego y la home lo lean de ahí.

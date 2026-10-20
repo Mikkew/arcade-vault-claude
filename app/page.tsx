@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
+import CatalogError from "@/components/CatalogError";
 import FeatureIcon from "@/components/FeatureIcon";
 import HomeSilhouettes from "@/components/HomeSilhouettes";
 import MiniCard from "@/components/MiniCard";
 import RevealObserver from "@/components/RevealObserver";
-import { GAMES } from "@/lib/games";
+import type { Game } from "@/lib/games";
+import { listGames } from "@/lib/games-repo";
 import {
   FAQ,
   FEATURES,
@@ -13,7 +16,15 @@ import {
   TOP_PLAYERS,
 } from "@/lib/home";
 
-export default function Home() {
+export default async function Home() {
+  let games: Game[] | null = null;
+  try {
+    games = await listGames();
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error("[home]", err);
+  }
+
   return (
     <div className="home fade-in">
       <RevealObserver />
@@ -72,18 +83,27 @@ export default function Home() {
         </div>
       </section>
 
-      {/* GAMES PREVIEW */}
+      {/* PREVIEW DE JUEGOS */}
       <section className="home-section reveal">
         <div className="section-head">
           <div className="kicker pixel neon-cyan">{"// 02"}</div>
           <h2 className="section-title">JUEGOS DISPONIBLES AHORA</h2>
           <div className="section-rule"></div>
         </div>
-        <div className="mini-rail">
-          {GAMES.slice(0, 6).map((g) => (
-            <MiniCard key={g.id} game={g} />
-          ))}
-        </div>
+        {games ? (
+          <div className="mini-rail">
+            {games.slice(0, 6).map((g) => (
+              <MiniCard key={g.id} game={g} />
+            ))}
+            {games.length === 0 && (
+              <div style={{ padding: 24, color: "var(--ink-faint)" }}>
+                Todavía no hay juegos disponibles.
+              </div>
+            )}
+          </div>
+        ) : (
+          <CatalogError />
+        )}
         <div style={{ textAlign: "center", marginTop: 24 }}>
           <Link href="/juegos" className="btn lg">
             VER TODOS LOS JUEGOS →
