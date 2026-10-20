@@ -1,33 +1,35 @@
 import type { Metadata } from "next";
-import { Press_Start_2P, JetBrains_Mono, Courier_Prime } from "next/font/google";
+import {
+  Press_Start_2P,
+  JetBrains_Mono,
+  Courier_Prime,
+} from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import { getCurrentProfile } from "@/lib/auth";
 import "./globals.css";
-
 const pressStart = Press_Start_2P({
   variable: "--font-press-start-2p",
   weight: "400",
   subsets: ["latin"],
 });
-
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   weight: ["400", "500", "700"],
   subsets: ["latin"],
 });
-
 const courierPrime = Courier_Prime({
   variable: "--font-courier-prime",
   weight: ["400", "700"],
   subsets: ["latin"],
 });
-
 export const metadata: Metadata = {
   title: "Arcade Vault · Portal Retro",
-  description: "Portal retro de juegos arcade con leaderboards y salón de la fama.",
+  description:
+    "Portal retro de juegos arcade con leaderboards y salón de la fama.",
 };
-
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const profile = await getCurrentProfile();
   return (
     <html
       lang="es"
@@ -37,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="av-bg" />
         <div className="av-noise" />
         <div className="av-root">
-          <Nav />
+          <Nav profile={profile} />
           <main className="av-main">{children}</main>
           <Footer />
         </div>
