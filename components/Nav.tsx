@@ -1,21 +1,18 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-export default function Nav() {
+import { signOut } from "@/app/acceso/actions";
+import type { Profile } from "@/lib/auth";
+export default function Nav({ profile }: { profile: Profile | null }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-
   const isInicio = pathname === "/";
   const isBiblioteca = pathname.startsWith("/juegos");
   const isSalon = pathname.startsWith("/salon");
   const isAbout = pathname.startsWith("/about");
   const isAcceso = pathname.startsWith("/acceso");
-
   const close = () => setOpen(false);
-
   return (
     <>
       <nav className="av-nav">
@@ -44,9 +41,20 @@ export default function Nav() {
           <span className="coin"></span>
           <span>CRÉDITOS · 03</span>
         </div>
-        <Link href="/acceso" className="btn auth-btn">
-          Iniciar Sesión
-        </Link>
+        {profile ? (
+          <form action={signOut} className="user-box">
+            <span className="user-name" title={profile.username}>
+              {profile.username}
+            </span>
+            <button type="submit" className="btn ghost">
+              SALIR
+            </button>
+          </form>
+        ) : (
+          <Link href="/acceso" className="btn auth-btn">
+            Iniciar Sesión
+          </Link>
+        )}
         <button
           type="button"
           className="btn ghost hamburger"
@@ -56,19 +64,25 @@ export default function Nav() {
           ≡
         </button>
       </nav>
-
       <div
         className={"av-mobile-backdrop" + (open ? " open" : "")}
         onClick={close}
       ></div>
       <aside className={"av-mobile-panel" + (open ? " open" : "")}>
-        <div className="pixel neon-cyan" style={{ fontSize: 11, marginBottom: 16 }}>
+        <div
+          className="pixel neon-cyan"
+          style={{ fontSize: 11, marginBottom: 16 }}
+        >
           MENÚ
         </div>
         <Link href="/" className={isInicio ? "active" : ""} onClick={close}>
           Inicio
         </Link>
-        <Link href="/juegos" className={isBiblioteca ? "active" : ""} onClick={close}>
+        <Link
+          href="/juegos"
+          className={isBiblioteca ? "active" : ""}
+          onClick={close}
+        >
           Biblioteca
         </Link>
         <Link href="/salon" className={isSalon ? "active" : ""} onClick={close}>
@@ -77,13 +91,30 @@ export default function Nav() {
         <Link href="/about" className={isAbout ? "active" : ""} onClick={close}>
           Acerca de
         </Link>
-        <Link href="/acceso" className={isAcceso ? "active" : ""} onClick={close}>
-          Iniciar Sesión
-        </Link>
+        {profile ? (
+          <form action={signOut} className="user-box">
+            <span className="user-name">{profile.username}</span>
+            <button type="submit" className="btn ghost">
+              SALIR
+            </button>
+          </form>
+        ) : (
+          <Link
+            href="/acceso"
+            className={isAcceso ? "active" : ""}
+            onClick={close}
+          >
+            Iniciar Sesión
+          </Link>
+        )}
         <div style={{ flex: 1 }}></div>
         <div
           className="pixel"
-          style={{ fontSize: 9, color: "var(--ink-faint)", letterSpacing: "0.16em" }}
+          style={{
+            fontSize: 9,
+            color: "var(--ink-faint)",
+            letterSpacing: "0.16em",
+          }}
         >
           CRÉDITOS · 03
         </div>
