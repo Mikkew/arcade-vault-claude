@@ -1,19 +1,34 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
+import CatalogError from "@/components/CatalogError";
 import Leaderboard from "@/components/Leaderboard";
-import { getGame, seededScores } from "@/lib/games";
+import { seededScores, type Game } from "@/lib/games";
+import { getGame } from "@/lib/games-repo";
 
 export async function generateMetadata({ params }: PageProps<"/juegos/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const game = getGame(id);
+  let game: Game | null = null;
+  try {
+    game = await getGame(id);
+  } catch (err) {
+    unstable_rethrow(err);
+    // Si la consulta falla, la página muestra el error; aquí basta con no poner título.
+  }
   if (!game) return {};
   return { title: `${game.title} · Arcade Vault`, description: game.short };
 }
 
 export default async function GameDetailPage({ params }: PageProps<"/juegos/[id]">) {
   const { id } = await params;
-  const game = getGame(id);
+  let game: Game | null;
+  try {
+    game = await getGame(id);
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error("[juegos/detalle]", err);
+    return <CatalogError />;
+  }
   if (!game) notFound();
 
   const scores = seededScores(id.length * 17 + 3, 10);
@@ -36,7 +51,7 @@ export default async function GameDetailPage({ params }: PageProps<"/juegos/[id]
           <div className="stat-strip">
             <div>
               <div className="l">Partidas</div>
-              <div className="v">{game.plays}</div>
+              <div className="v">0</div>
             </div>
             <div>
               <div className="l">Mejor global</div>
@@ -44,7 +59,7 @@ export default async function GameDetailPage({ params }: PageProps<"/juegos/[id]
                 className="v"
                 style={{ color: "var(--magenta)", textShadow: "0 0 6px rgba(255,0,110,0.5)" }}
               >
-                {game.best.toLocaleString("es-ES")}
+                —
               </div>
             </div>
             <div>

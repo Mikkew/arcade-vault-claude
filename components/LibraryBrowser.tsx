@@ -1,23 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CATS, GAMES } from "@/lib/games";
+import { CATS, type Game } from "@/lib/games";
 import GameCard from "@/components/GameCard";
 
 // Ignora mayúsculas y tildes: "caida" encuentra "CAÍDA".
 const normalize = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export default function LibraryBrowser() {
+export default function LibraryBrowser({ games }: { games: Game[] }) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<(typeof CATS)[number]>("TODOS");
 
   const filtered = useMemo(() => {
     const needle = normalize(q);
-    return GAMES.filter(
+    return games.filter(
       (g) => (cat === "TODOS" || g.cat === cat) && normalize(g.title).includes(needle),
     );
-  }, [q, cat]);
+  }, [games, q, cat]);
 
   return (
     <>
@@ -61,9 +61,13 @@ export default function LibraryBrowser() {
               className="pixel"
               style={{ fontSize: 14, color: "var(--magenta)", marginBottom: 12 }}
             >
-              NO HAY RESULTADOS
+              {games.length === 0 ? "CATÁLOGO VACÍO" : "NO HAY RESULTADOS"}
             </div>
-            <div>Intenta otra búsqueda o categoría.</div>
+            <div>
+              {games.length === 0
+                ? "Todavía no hay juegos disponibles."
+                : "Intenta otra búsqueda o categoría."}
+            </div>
           </div>
         )}
       </div>

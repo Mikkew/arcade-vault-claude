@@ -1,16 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { GAMES, seededScores } from "@/lib/games";
+import { seededScores, type Game } from "@/lib/games";
 
-export default function HallOfFame() {
-  const [tab, setTab] = useState(GAMES[0].id);
+export default function HallOfFame({ games }: { games: Game[] }) {
+  const [tab, setTab] = useState(games[0]?.id ?? "");
   const rows = useMemo(() => seededScores(tab.length * 23 + 7, 12), [tab]);
+
+  if (games.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: 80, color: "var(--ink-faint)" }}>
+        <div className="pixel" style={{ fontSize: 14, color: "var(--magenta)", marginBottom: 12 }}>
+          CATÁLOGO VACÍO
+        </div>
+        <div>Todavía no hay juegos disponibles.</div>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="hall-tabs">
-        {GAMES.map((g) => (
+        {games.map((g) => (
           <button
             key={g.id}
             type="button"
