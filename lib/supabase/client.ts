@@ -1,0 +1,12 @@
+import { createBrowserClient } from "@supabase/ssr";
+export function createClient() {
+  // Next.js solo inlinea NEXT_PUBLIC_* con acceso literal, no con process.env[name].
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "Faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Revisa .env.local.",
+    );
+  }
+  return createBrowserClient(url, key);
+}
