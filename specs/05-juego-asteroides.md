@@ -1,6 +1,6 @@
 # SPEC 05 — Juego Asteroides en ROCAS
 
-> **Estado:** Draft
+> **Estado:** Implemented
 > **Depende de:** SPEC 01
 > **Fecha:** 2026-10-17
 > **Objetivo:** Portar el juego de `references/started-games/02-asteroids/` a TypeScript y ejecutarlo en `/juegos/rocas/jugar`, integrado con el HUD, la pausa y el modal de fin de partida de la plataforma, con efectos de sonido sintetizados.
