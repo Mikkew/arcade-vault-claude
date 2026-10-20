@@ -1,6 +1,6 @@
 # SPEC 06 — Autenticación con Supabase
 
-> **Estado:**   Approved
+> **Estado:** Implemented
 > **Depende de:** SPEC 04
 > **Fecha:** 2026-10-19
 > **Objetivo:** Permitir registro, inicio y cierre de sesión con email y contraseña mediante Supabase Auth, con un perfil público (`profiles.username`) y el estado de sesión visible en la navegación.
