@@ -3,12 +3,19 @@
 import { useMemo, useState } from "react";
 import { CATS, type Game } from "@/lib/games";
 import GameCard from "@/components/GameCard";
+import type { GameStats } from "@/lib/scores";
 
 // Ignora mayúsculas y tildes: "caida" encuentra "CAÍDA".
 const normalize = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export default function LibraryBrowser({ games }: { games: Game[] }) {
+export default function LibraryBrowser({
+  games,
+  stats,
+}: {
+  games: Game[];
+  stats: GameStats[];
+}) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<(typeof CATS)[number]>("TODOS");
 
@@ -46,7 +53,11 @@ export default function LibraryBrowser({ games }: { games: Game[] }) {
 
       <div className="av-grid">
         {filtered.map((g) => (
-          <GameCard key={g.id} game={g} />
+          <GameCard
+            key={g.id}
+            game={g}
+            best={stats.find((s) => s.gameId === g.id)?.best ?? 0}
+          />
         ))}
         {filtered.length === 0 && (
           <div

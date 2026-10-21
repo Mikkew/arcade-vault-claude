@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Game } from "@/lib/games";
 
-export default function GameCard({ game }: { game: Game }) {
+export default function GameCard({ game, best }: { game: Game; best: number }) {
   const router = useRouter();
   const tiltRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +44,7 @@ export default function GameCard({ game }: { game: Game }) {
         <div className="row">
           <div className="score-badge">
             <span>MEJOR PUNTUACIÓN</span>
-            <b>—</b>
+            <b>{best > 0 ? best.toLocaleString("es-ES") : "—"}</b>
           </div>
           <Link
             href={href}

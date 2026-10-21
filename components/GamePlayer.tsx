@@ -1,25 +1,27 @@
 "use client";
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import AsteroidsCanvas from "@/components/AsteroidsCanvas";
+import { saveScore } from "@/app/juegos/[id]/jugar/actions";
 import type { AsteroidsCallbacks, AsteroidsGame } from "@/lib/asteroids/types";
-
 interface GamePlayerProps {
   id: string;
   title: string;
+  isLoggedIn: boolean;
 }
-
-export default function GamePlayer({ id, title }: GamePlayerProps) {
+type SaveStatus = "idle" | "saving" | "saved" | "error" | "unauthenticated";
+export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [name, setName] = useState("INVITADO");
-  const [saved, setSaved] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const scoreRef = useRef(0);
-
+  // Bloquea el doble clic antes de que React alcance a deshabilitar el botón;
+  // se libera al fallar (reintento) y se reinicia con cada partida nueva.
+  const savingRef = useRef(false);
   // Solo "rocas" tiene un juego real; los demás conservan la simulación.
   const isRocas = id === "rocas";
   const gameRef = useRef<AsteroidsGame | null>(null);
@@ -41,7 +43,6 @@ export default function GamePlayer({ id, title }: GamePlayerProps) {
     }),
     [],
   );
-
   // Simulación: la puntuación sube sola mientras no haya pausa ni fin de partida.
   // La regla de nivel del template (score % 2500 < 100) se evalúa en cada tick.
   useEffect(() => {
@@ -54,7 +55,6 @@ export default function GamePlayer({ id, title }: GamePlayerProps) {
     }, 220);
     return () => clearInterval(t);
   }, [isRocas, over, paused]);
-
   const togglePause = () => {
     const next = !paused;
     setPaused(next);
@@ -63,19 +63,39 @@ export default function GamePlayer({ id, title }: GamePlayerProps) {
       else gameRef.current?.resume();
     }
   };
-
   const toggleMute = () => {
     const next = !muted;
     mutedRef.current = next;
     setMuted(next);
     gameRef.current?.setMuted(next);
   };
-
   const endGame = () => {
     if (isRocas) gameRef.current?.end();
     else setOver(true);
   };
-
+  const handleSave = async () => {
+    // Los juegos simulados solo marcan el estado local: no escriben en scores.
+    if (!isRocas) {
+      setSaveStatus("saved");
+      return;
+    }
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaveStatus("saving");
+    try {
+      const result = await saveScore(id, score);
+      if (result.ok) {
+        setSaveStatus("saved");
+        return;
+      }
+      setSaveStatus(
+        result.reason === "unauthenticated" ? "unauthenticated" : "error",
+      );
+    } catch {
+      setSaveStatus("error");
+    }
+    savingRef.current = false;
+  };
   const restart = () => {
     if (isRocas) {
       // Si se terminó en pausa, el motor sigue pausado: se reanuda antes de reiniciar.
@@ -88,16 +108,18 @@ export default function GamePlayer({ id, title }: GamePlayerProps) {
     setLevel(1);
     setPaused(false);
     setOver(false);
-    setSaved(false);
+    savingRef.current = false;
+    setSaveStatus("idle");
   };
-
   return (
     <div className="av-player fade-in">
       <div className="player-hud">
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <div className="hud-stat">
             <div className="l">Jugador</div>
-            <div className="v" style={{ color: "var(--ink)" }}>{name}</div>
+            <div className="v" style={{ color: "var(--ink)" }}>
+              {name}
+            </div>
           </div>
           <div className="hud-stat">
             <div className="l">Puntuación</div>
@@ -134,7 +156,6 @@ export default function GamePlayer({ id, title }: GamePlayerProps) {
           </Link>
         </div>
       </div>
-
       <div className="crt">
         <div className="crt-screen">
           {isRocas ? (
@@ -149,9 +170,14 @@ export default function GamePlayer({ id, title }: GamePlayerProps) {
             </div>
           )}
           {paused && (
-            <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
+            <div
+              className="crt-content"
+              style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}
+            >
               <div>
-                <div className="pixel neon-yellow" style={{ fontSize: 22 }}>EN PAUSA</div>
+                <div className="pixel neon-yellow" style={{ fontSize: 22 }}>
+                  EN PAUSA
+                </div>
                 <div
                   className="mono"
                   style={{
@@ -173,27 +199,50 @@ export default function GamePlayer({ id, title }: GamePlayerProps) {
           <span>CARGA · 1MB</span>
         </div>
       </div>
-
       {over && (
         <div className="modal-bd">
           <div className="modal">
             <h2>FIN DEL JUEGO</h2>
             <div className="final-label">PUNTUACIÓN FINAL</div>
             <div className="final">{score.toLocaleString("es-ES")}</div>
-            {!saved ? (
+            {saveStatus === "saved" ? (
+              <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
+            ) : isRocas && (!isLoggedIn || saveStatus === "unauthenticated") ? (
               <div className="input-row">
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value.toUpperCase().slice(0, 10))}
-                  placeholder="TUS INICIALES"
-                />
-                {/* Solo cambia estado local: no se persiste nada (ver spec 01). */}
-                <button type="button" className="btn yellow" onClick={() => setSaved(true)}>
-                  GUARDAR PUNTUACIÓN
-                </button>
+                <Link href="/acceso" className="btn yellow">
+                  INICIA SESIÓN PARA GUARDAR
+                </Link>
               </div>
             ) : (
-              <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
+              <>
+                <div className="input-row">
+                  {/* Con ROCAS el jugador es el de la sesión: no hay apodo libre. */}
+                  {!isRocas && (
+                    <input
+                      value={name}
+                      onChange={(e) =>
+                        setName(e.target.value.toUpperCase().slice(0, 10))
+                      }
+                      placeholder="TUS INICIALES"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    className="btn yellow"
+                    disabled={saveStatus === "saving"}
+                    onClick={handleSave}
+                  >
+                    {saveStatus === "saving"
+                      ? "GUARDANDO…"
+                      : "GUARDAR PUNTUACIÓN"}
+                  </button>
+                </div>
+                {saveStatus === "error" && (
+                  <div className="terminal-error" role="alert">
+                    ERROR: NO SE PUDO GUARDAR LA PUNTUACIÓN. INTÉNTALO DE NUEVO.
+                  </div>
+                )}
+              </>
             )}
             <div className="actions">
               <button type="button" className="btn" onClick={restart}>

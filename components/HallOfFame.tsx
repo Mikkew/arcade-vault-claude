@@ -1,91 +1,150 @@
-"use client";
-
-import { useMemo, useState } from "react";
-import { seededScores, type Game } from "@/lib/games";
-
-export default function HallOfFame({ games }: { games: Game[] }) {
-  const [tab, setTab] = useState(games[0]?.id ?? "");
-  const rows = useMemo(() => seededScores(tab.length * 23 + 7, 12), [tab]);
-
+import Link from "next/link";
+import type { Game } from "@/lib/games";
+import type { ScoreEntry } from "@/lib/scores";
+interface HallOfFameProps {
+  games: Game[];
+  selectedId: string;
+  // null: la consulta de puntuaciones falló.
+  rows: ScoreEntry[] | null;
+}
+export default function HallOfFame({
+  games,
+  selectedId,
+  rows,
+}: HallOfFameProps) {
   if (games.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: 80, color: "var(--ink-faint)" }}>
-        <div className="pixel" style={{ fontSize: 14, color: "var(--magenta)", marginBottom: 12 }}>
+      <div
+        style={{ textAlign: "center", padding: 80, color: "var(--ink-faint)" }}
+      >
+        <div
+          className="pixel"
+          style={{ fontSize: 14, color: "var(--magenta)", marginBottom: 12 }}
+        >
           CATÁLOGO VACÍO
         </div>
         <div>Todavía no hay juegos disponibles.</div>
       </div>
     );
   }
-
+  const selected = games.find((g) => g.id === selectedId);
   return (
     <>
       <div className="hall-tabs">
         {games.map((g) => (
-          <button
+          <Link
             key={g.id}
-            type="button"
-            className={"chip" + (tab === g.id ? " active" : "")}
-            onClick={() => setTab(g.id)}
+            href={`/salon?juego=${g.id}`}
+            scroll={false}
+            className={"chip" + (selectedId === g.id ? " active" : "")}
+            aria-current={selectedId === g.id ? "page" : undefined}
           >
             {g.title}
-          </button>
+          </Link>
         ))}
       </div>
-
-      <div className="podium">
-        <div className="podium-slot silver">
-          <div className="rank-num">02</div>
-          <div className="name">{rows[1].name}</div>
-          <div className="score">{rows[1].score.toLocaleString("es-ES")}</div>
-          <div className="date">{rows[1].date}</div>
+      {rows === null ? (
+        <div className="terminal-error" role="alert">
+          ERROR: NO SE PUDO CARGAR EL RANKING. INTÉNTALO DE NUEVO MÁS TARDE.
         </div>
-        <div className="podium-slot gold">
+      ) : rows.length === 0 ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: 80,
+            color: "var(--ink-faint)",
+          }}
+        >
           <div
             className="pixel"
-            style={{ fontSize: 9, color: "var(--gold)", letterSpacing: "0.18em" }}
+            style={{ fontSize: 14, color: "var(--ink-dim)", marginBottom: 12 }}
           >
-            CAMPEÓN
+            SIN PUNTUACIONES
           </div>
-          <div className="rank-num" style={{ fontSize: 36, marginTop: 4 }}>
-            01
+          <div style={{ marginBottom: 24 }}>
+            Todavía no hay partidas guardadas en{" "}
+            {selected?.title ?? "este juego"}.
           </div>
-          <div className="name">{rows[0].name}</div>
-          <div className="score" style={{ fontSize: 20 }}>
-            {rows[0].score.toLocaleString("es-ES")}
-          </div>
-          <div className="date">{rows[0].date}</div>
+          {selectedId === "rocas" && (
+            <Link href="/juegos/rocas/jugar" className="btn yellow">
+              JUGAR Y GUARDAR LA PRIMERA
+            </Link>
+          )}
         </div>
-        <div className="podium-slot bronze">
-          <div className="rank-num">03</div>
-          <div className="name">{rows[2].name}</div>
-          <div className="score">{rows[2].score.toLocaleString("es-ES")}</div>
-          <div className="date">{rows[2].date}</div>
-        </div>
-      </div>
-
-      <div className="hall-table">
-        <div className="th">
-          <div>RANGO</div>
-          <div>JUGADOR</div>
-          <div>PUNTUACIÓN</div>
-          <div>FECHA</div>
-        </div>
-        {rows.map((r, i) => (
-          <div
-            key={r.name + i}
-            className={
-              "tr" + (i === 0 ? " top1" : i === 1 ? " top2" : i === 2 ? " top3" : "")
-            }
-            style={{ animationDelay: `${i * 50}ms` }}
-          >
-            <div className="rk">#{String(r.rank).padStart(2, "0")}</div>
-            <div className="pl">{r.name}</div>
-            <div className="sc">{r.score.toLocaleString("es-ES")}</div>
-            <div className="dt">{r.date}</div>
+      ) : (
+        <>
+          <div className="podium">
+            <PodiumSlot entry={rows[1]} className="silver" place="02" />
+            <PodiumSlot entry={rows[0]} className="gold" place="01" champion />
+            <PodiumSlot entry={rows[2]} className="bronze" place="03" />
           </div>
-        ))}
-      </div>
+          <div className="hall-table">
+            <div className="th">
+              <div>RANGO</div>
+              <div>JUGADOR</div>
+              <div>PUNTUACIÓN</div>
+              <div>FECHA</div>
+            </div>
+            {rows.map((r, i) => (
+              <div
+                key={r.rank}
+                className={
+                  "tr" +
+                  (i === 0
+                    ? " top1"
+                    : i === 1
+                      ? " top2"
+                      : i === 2
+                        ? " top3"
+                        : "")
+                }
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                <div className="rk">#{String(r.rank).padStart(2, "0")}</div>
+                <div className="pl">{r.username}</div>
+                <div className="sc">{r.score.toLocaleString("es-ES")}</div>
+                <div className="dt">{r.date}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </>
+  );
+}
+// Con menos de tres partidas el puesto queda libre.
+function PodiumSlot({
+  entry,
+  className,
+  place,
+  champion = false,
+}: {
+  entry: ScoreEntry | undefined;
+  className: string;
+  place: string;
+  champion?: boolean;
+}) {
+  return (
+    <div className={"podium-slot " + className}>
+      {champion && (
+        <div
+          className="pixel"
+          style={{ fontSize: 9, color: "var(--gold)", letterSpacing: "0.18em" }}
+        >
+          CAMPEÓN
+        </div>
+      )}
+      <div
+        className="rank-num"
+        style={champion ? { fontSize: 36, marginTop: 4 } : undefined}
+      >
+        {place}
+      </div>
+      <div className="name">{entry?.username ?? "—"}</div>
+      <div className="score" style={champion ? { fontSize: 20 } : undefined}>
+        {entry ? entry.score.toLocaleString("es-ES") : "—"}
+      </div>
+      <div className="date">{entry?.date ?? ""}</div>
+    </div>
   );
 }
