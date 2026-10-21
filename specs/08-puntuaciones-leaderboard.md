@@ -1,6 +1,6 @@
 # SPEC 08 — Puntuaciones y leaderboard
 
-> **Estado:** Draft
+> **Estado:** Approved
 > **Depende de:** SPEC 05, SPEC 06, SPEC 07
 > **Fecha:** 2026-10-19
 > **Objetivo:** Guardar en Supabase la puntuación de ROCAS de usuarios con sesión y mostrar el leaderboard real en el detalle de cada juego, en el Salón de la Fama y en la home, con `best` y `plays` derivados de la tabla `scores`.

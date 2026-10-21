@@ -7,14 +7,9 @@ import MiniCard from "@/components/MiniCard";
 import RevealObserver from "@/components/RevealObserver";
 import type { Game } from "@/lib/games";
 import { listGames } from "@/lib/games-repo";
-import {
-  FAQ,
-  FEATURES,
-  PRICING_PERKS,
-  RECENT_SCORES,
-  STATS,
-  TOP_PLAYERS,
-} from "@/lib/home";
+import { FAQ, FEATURES, PRICING_PERKS, STATS } from "@/lib/home";
+import type { ScoreEntry } from "@/lib/scores";
+import { getRecentScores, getTopPlayers } from "@/lib/scores-repo";
 
 export default async function Home() {
   let games: Game[] | null = null;
@@ -24,6 +19,23 @@ export default async function Home() {
     unstable_rethrow(err);
     console.error("[home]", err);
   }
+
+  // Cada lectura falla por separado: null = error, [] = sin partidas.
+  let recent: ScoreEntry[] | null = null;
+  try {
+    recent = await getRecentScores();
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error("[home] recientes", err);
+  }
+  let topPlayers: { username: string; best: number }[] | null = null;
+  try {
+    topPlayers = await getTopPlayers();
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error("[home] top jugadores", err);
+  }
+  const gameById = new Map((games ?? []).map((g) => [g.id, g]));
 
   return (
     <div className="home fade-in">
@@ -140,46 +152,75 @@ export default async function Home() {
             <div className="ac-head">
               <div className="ac-title pixel">▸ ÚLTIMAS PUNTUACIONES</div>
             </div>
-            <div className="ticker">
-              {RECENT_SCORES.map((r, i) => (
-                <div
-                  key={r.player}
-                  className="tick-row"
-                  style={{ animationDelay: i * 60 + "ms" }}
-                >
-                  <span className={"tk-p neon-" + r.color}>{r.player}</span>
-                  <span className="tk-mid">▸ {r.game}</span>
-                  <span className="tk-s">+{r.score.toLocaleString("es-ES")}</span>
-                  <span className="tk-t">{r.ago}</span>
-                </div>
-              ))}
-            </div>
+            {recent === null ? (
+              <ActivityMessage error>
+                ERROR: NO SE PUDIERON CARGAR LAS PUNTUACIONES.
+              </ActivityMessage>
+            ) : recent.length === 0 ? (
+              <ActivityMessage>
+                Aún no hay partidas guardadas. Juega ROCAS con sesión iniciada para abrir la lista.
+              </ActivityMessage>
+            ) : (
+              <div className="ticker">
+                {recent.map((r, i) => {
+                  const game = gameById.get(r.gameId);
+                  return (
+                    <div
+                      key={`${r.rank}-${r.gameId}`}
+                      className="tick-row"
+                      style={{ animationDelay: i * 60 + "ms" }}
+                    >
+                      <span className={"tk-p neon-" + (game?.color ?? "cyan")}>
+                        {r.username}
+                      </span>
+                      <span className="tk-mid">▸ {game?.title ?? r.gameId}</span>
+                      <span className="tk-s">+{r.score.toLocaleString("es-ES")}</span>
+                      <span className="tk-t">{r.date}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="activity-card">
             <div className="ac-head">
-              <div className="ac-title pixel neon-magenta">▸ TOP JUGADORES · HOY</div>
+              <div className="ac-title pixel neon-magenta">▸ TOP JUGADORES</div>
               <Link href="/salon" className="lb-link">
                 VER SALÓN →
               </Link>
             </div>
-            <div className="top-list">
-              {TOP_PLAYERS.map((r, i) => (
-                <div
-                  key={r.player}
-                  className={
-                    "top-row" + (i === 0 ? " top1" : i === 1 ? " top2" : i === 2 ? " top3" : "")
-                  }
-                >
-                  <span className="tp-rk">#{String(r.rank).padStart(2, "0")}</span>
-                  <span className="tp-bar">
-                    <span className="tp-fill" style={{ width: 100 - i * 16 + "%" }}></span>
-                  </span>
-                  <span className="tp-p">{r.player}</span>
-                  <span className="tp-s">{r.score.toLocaleString("es-ES")}</span>
-                </div>
-              ))}
-            </div>
+            {topPlayers === null ? (
+              <ActivityMessage error>
+                ERROR: NO SE PUDO CARGAR EL TOP DE JUGADORES.
+              </ActivityMessage>
+            ) : topPlayers.length === 0 ? (
+              <ActivityMessage>
+                Todavía no hay jugadores en el ranking.
+              </ActivityMessage>
+            ) : (
+              <div className="top-list">
+                {topPlayers.map((r, i) => (
+                  <div
+                    key={r.username}
+                    className={
+                      "top-row" +
+                      (i === 0 ? " top1" : i === 1 ? " top2" : i === 2 ? " top3" : "")
+                    }
+                  >
+                    <span className="tp-rk">#{String(i + 1).padStart(2, "0")}</span>
+                    <span className="tp-bar">
+                      <span
+                        className="tp-fill"
+                        style={{ width: (r.best / topPlayers[0].best) * 100 + "%" }}
+                      ></span>
+                    </span>
+                    <span className="tp-p">{r.username}</span>
+                    <span className="tp-s">{r.best.toLocaleString("es-ES")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -237,6 +278,30 @@ export default async function Home() {
           Gratis. Sin registro obligatorio. Empieza en segundos.
         </div>
       </section>
+    </div>
+  );
+}
+
+function ActivityMessage({
+  children,
+  error = false,
+}: {
+  children: React.ReactNode;
+  error?: boolean;
+}) {
+  return (
+    <div
+      role={error ? "alert" : undefined}
+      className="mono"
+      style={{
+        padding: "28px 16px",
+        fontSize: 12,
+        lineHeight: 1.6,
+        textAlign: "center",
+        color: error ? "var(--magenta)" : "var(--ink-faint)",
+      }}
+    >
+      {children}
     </div>
   );
 }
