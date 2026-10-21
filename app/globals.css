@@ -664,8 +664,8 @@ a { color: inherit; text-decoration: none; }
   background: radial-gradient(120% 90% at 50% 50%, transparent 60%, rgba(0,0,0,0.65));
   pointer-events: none;
 }
-/* canvas del juego real (Rocas): 800x600 lógicos escalados al ancho de la pantalla */
-.asteroids-canvas {
+/* canvas del juego real (Rocas, Caída): 800x600 lógicos escalados al ancho de la pantalla */
+.game-canvas {
   position: absolute; inset: 0;
   z-index: 0;
   display: block;
