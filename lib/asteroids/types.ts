@@ -1,19 +1,8 @@
 // ===== types.ts — tipos y constantes del motor de Asteroides =====
+import type { GameCallbacks, GameEngine } from "@/lib/engine/types";
 export type Phase = "playing" | "dead" | "gameover";
-export interface AsteroidsCallbacks {
-  onScore: (score: number) => void;
-  onLives: (lives: number) => void;
-  onLevel: (level: number) => void;
-  onGameOver: (finalScore: number) => void;
-}
-export interface AsteroidsGame {
-  pause(): void;
-  resume(): void;
-  end(): void; // termina la partida y dispara onGameOver
-  restart(): void; // partida nueva: score 0, vidas 3, nivel 1
-  setMuted(muted: boolean): void;
-  destroy(): void; // cancela el loop y quita listeners
-}
+export type AsteroidsCallbacks = GameCallbacks;
+export type AsteroidsGame = GameEngine;
 // Teclas pulsadas, indexadas por `KeyboardEvent.code`
 export type Keys = Record<string, boolean | undefined>;
 // Resolución lógica del canvas

@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import AsteroidsCanvas from "@/components/AsteroidsCanvas";
+import GameCanvas from "@/components/GameCanvas";
+import { GAME_REGISTRY } from "@/components/games/registry";
 import { saveScore } from "@/app/juegos/[id]/jugar/actions";
-import type { AsteroidsCallbacks, AsteroidsGame } from "@/lib/asteroids/types";
+import type { GameCallbacks, GameEngine } from "@/lib/engine/types";
 interface GamePlayerProps {
   id: string;
   title: string;
@@ -22,16 +23,17 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
   // Bloquea el doble clic antes de que React alcance a deshabilitar el botón;
   // se libera al fallar (reintento) y se reinicia con cada partida nueva.
   const savingRef = useRef(false);
-  // Solo "rocas" tiene un juego real; los demás conservan la simulación.
-  const isRocas = id === "rocas";
-  const gameRef = useRef<AsteroidsGame | null>(null);
+  // Los juegos con entrada en el registro son reales; los demás conservan la simulación.
+  const entry = GAME_REGISTRY[id];
+  const isReal = !!entry;
+  const gameRef = useRef<GameEngine | null>(null);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
-  const handleReady = useCallback((game: AsteroidsGame | null) => {
+  const handleReady = useCallback((game: GameEngine | null) => {
     gameRef.current = game;
     game?.setMuted(mutedRef.current); // un motor nuevo hereda la preferencia actual
   }, []);
-  const callbacks = useMemo<AsteroidsCallbacks>(
+  const callbacks = useMemo<GameCallbacks>(
     () => ({
       onScore: setScore,
       onLives: setLives,
@@ -46,7 +48,7 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
   // Simulación: la puntuación sube sola mientras no haya pausa ni fin de partida.
   // La regla de nivel del template (score % 2500 < 100) se evalúa en cada tick.
   useEffect(() => {
-    if (isRocas || over || paused) return;
+    if (isReal || over || paused) return;
     const t = setInterval(() => {
       const next = scoreRef.current + Math.floor(10 + Math.random() * 90);
       scoreRef.current = next;
@@ -54,11 +56,11 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
       if (next % 2500 < 100) setLevel((l) => l + 1);
     }, 220);
     return () => clearInterval(t);
-  }, [isRocas, over, paused]);
+  }, [isReal, over, paused]);
   const togglePause = () => {
     const next = !paused;
     setPaused(next);
-    if (isRocas) {
+    if (isReal) {
       if (next) gameRef.current?.pause();
       else gameRef.current?.resume();
     }
@@ -70,12 +72,12 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
     gameRef.current?.setMuted(next);
   };
   const endGame = () => {
-    if (isRocas) gameRef.current?.end();
+    if (isReal) gameRef.current?.end();
     else setOver(true);
   };
   const handleSave = async () => {
     // Los juegos simulados solo marcan el estado local: no escriben en scores.
-    if (!isRocas) {
+    if (!isReal) {
       setSaveStatus("saved");
       return;
     }
@@ -97,7 +99,7 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
     savingRef.current = false;
   };
   const restart = () => {
-    if (isRocas) {
+    if (isReal) {
       // Si se terminó en pausa, el motor sigue pausado: se reanuda antes de reiniciar.
       gameRef.current?.resume();
       gameRef.current?.restart();
@@ -125,14 +127,18 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
             <div className="l">Puntuación</div>
             <div className="v">{score.toLocaleString("es-ES")}</div>
           </div>
-          <div className="hud-stat lives">
-            <div className="l">Vidas</div>
-            <div className="v">{"♥ ".repeat(lives).trim() || "—"}</div>
-          </div>
-          <div className="hud-stat level">
-            <div className="l">Nivel</div>
-            <div className="v">{String(level).padStart(2, "0")}</div>
-          </div>
+          {(!entry || entry.hud.lives) && (
+            <div className="hud-stat lives">
+              <div className="l">Vidas</div>
+              <div className="v">{"♥ ".repeat(lives).trim() || "—"}</div>
+            </div>
+          )}
+          {(!entry || entry.hud.level) && (
+            <div className="hud-stat level">
+              <div className="l">Nivel</div>
+              <div className="v">{String(level).padStart(2, "0")}</div>
+            </div>
+          )}
         </div>
         <div className="hud-actions">
           <button type="button" className="btn yellow" onClick={togglePause}>
@@ -141,7 +147,7 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
           <button type="button" className="btn magenta" onClick={endGame}>
             FIN
           </button>
-          {isRocas && (
+          {entry?.sound && (
             <button
               type="button"
               className="btn ghost"
@@ -158,8 +164,13 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
       </div>
       <div className="crt">
         <div className="crt-screen">
-          {isRocas ? (
-            <AsteroidsCanvas callbacks={callbacks} onReady={handleReady} />
+          {entry ? (
+            <GameCanvas
+              createEngine={entry.createEngine}
+              callbacks={callbacks}
+              label={entry.label}
+              onReady={handleReady}
+            />
           ) : (
             <div className="game-arena">
               <div className="grid-floor"></div>
@@ -193,6 +204,20 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
             </div>
           )}
         </div>
+        {entry && (
+          <div
+            className="mono"
+            style={{
+              fontSize: 11,
+              color: "var(--ink-dim)",
+              marginTop: 10,
+              letterSpacing: "0.16em",
+              textAlign: "center",
+            }}
+          >
+            {entry.controls}
+          </div>
+        )}
         <div className="crt-bottom">
           <span className="led">SEÑAL OK</span>
           <span>{title} · CRT-83 · 60 HZ</span>
@@ -207,7 +232,7 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
             <div className="final">{score.toLocaleString("es-ES")}</div>
             {saveStatus === "saved" ? (
               <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
-            ) : isRocas && (!isLoggedIn || saveStatus === "unauthenticated") ? (
+            ) : isReal && (!isLoggedIn || saveStatus === "unauthenticated") ? (
               <div className="input-row">
                 <Link href="/acceso" className="btn yellow">
                   INICIA SESIÓN PARA GUARDAR
@@ -217,7 +242,7 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
               <>
                 <div className="input-row">
                   {/* Con ROCAS el jugador es el de la sesión: no hay apodo libre. */}
-                  {!isRocas && (
+                  {!isReal && (
                     <input
                       value={name}
                       onChange={(e) =>

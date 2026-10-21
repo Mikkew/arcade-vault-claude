@@ -97,11 +97,11 @@ export function createAsteroidsGame(
     }
     if (lives !== sentLives) {
       sentLives = lives;
-      callbacks.onLives(lives);
+      callbacks.onLives?.(lives);
     }
     if (level !== sentLevel) {
       sentLevel = level;
-      callbacks.onLevel(level);
+      callbacks.onLevel?.(level);
     }
   };
   // ── Lógica ──

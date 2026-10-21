@@ -1,16 +1,24 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { createAsteroidsGame } from "@/lib/asteroids/engine";
-import type { AsteroidsCallbacks, AsteroidsGame } from "@/lib/asteroids/types";
-interface AsteroidsCanvasProps {
-  callbacks: AsteroidsCallbacks;
+import type {
+  CreateEngine,
+  GameCallbacks,
+  GameEngine,
+} from "@/lib/engine/types";
+interface GameCanvasProps {
+  /** Referencia estable (la exporta el registro), no se crea en el render. */
+  createEngine: CreateEngine;
+  callbacks: GameCallbacks;
+  label: string;
   /** Recibe el motor al montar y `null` al desmontar. */
-  onReady: (game: AsteroidsGame | null) => void;
+  onReady: (game: GameEngine | null) => void;
 }
-export default function AsteroidsCanvas({
+export default function GameCanvas({
+  createEngine,
   callbacks,
+  label,
   onReady,
-}: AsteroidsCanvasProps) {
+}: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Siempre se llama a la última versión de las props sin recrear el motor.
   const callbacksRef = useRef(callbacks);
@@ -23,10 +31,10 @@ export default function AsteroidsCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const game = createAsteroidsGame(canvas, {
+    const game = createEngine(canvas, {
       onScore: (v) => callbacksRef.current.onScore(v),
-      onLives: (v) => callbacksRef.current.onLives(v),
-      onLevel: (v) => callbacksRef.current.onLevel(v),
+      onLives: (v) => callbacksRef.current.onLives?.(v),
+      onLevel: (v) => callbacksRef.current.onLevel?.(v),
       onGameOver: (v) => callbacksRef.current.onGameOver(v),
     });
     onReadyRef.current(game);
@@ -34,12 +42,6 @@ export default function AsteroidsCanvas({
       game.destroy();
       onReadyRef.current(null);
     };
-  }, []);
-  return (
-    <canvas
-      ref={canvasRef}
-      className="asteroids-canvas"
-      aria-label="Juego Rocas"
-    />
-  );
+  }, [createEngine]);
+  return <canvas ref={canvasRef} className="game-canvas" aria-label={label} />;
 }
