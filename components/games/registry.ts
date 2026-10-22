@@ -1,4 +1,5 @@
 import { createAsteroidsGame } from "@/lib/asteroids/engine";
+import { createBloqueBusterGame } from "@/lib/bloque-buster/engine";
 import { createCaidaGame } from "@/lib/caida/engine";
 import type { CreateEngine } from "@/lib/engine/types";
 export interface GameEntry {
@@ -23,5 +24,12 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
     hud: { lives: false, level: true },
     sound: false,
     controls: "← → MOVER · ↑ / X ROTAR · ↓ BAJAR · ESPACIO CAÍDA",
+  },
+  "bloque-buster": {
+    createEngine: createBloqueBusterGame,
+    label: "Juego Bloque Buster",
+    hud: { lives: true, level: true },
+    sound: true,
+    controls: "← → / RATÓN MOVER PALA",
   },
 };
