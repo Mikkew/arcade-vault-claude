@@ -1,6 +1,7 @@
 import { createAsteroidsGame } from "@/lib/asteroids/engine";
 import { createBloqueBusterGame } from "@/lib/bloque-buster/engine";
 import { createCaidaGame } from "@/lib/caida/engine";
+import { createSerpentinaGame } from "@/lib/serpentina/engine";
 import type { CreateEngine } from "@/lib/engine/types";
 export interface GameEntry {
   createEngine: CreateEngine;
@@ -31,5 +32,12 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
     hud: { lives: true, level: true },
     sound: true,
     controls: "← → / RATÓN MOVER PALA",
+  },
+  serpentina: {
+    createEngine: createSerpentinaGame,
+    label: "Juego Serpentina",
+    hud: { lives: false, level: true },
+    sound: true,
+    controls: "← ↑ ↓ → / WASD GIRAR",
   },
 };
