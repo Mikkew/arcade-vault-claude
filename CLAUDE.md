@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-`arcade-vault` is a freshly scaffolded `create-next-app` project (single initial commit). `app/page.tsx` and the metadata in `app/layout.tsx` are still template boilerplate, so expect to replace them rather than build on them.
+`arcade-vault` is a retro arcade portal (UI copy in Spanish): home, About with a contact form, a game library and detail pages, an in-browser player, Supabase auth, and a Hall of Fame with real leaderboards. Work so far is tracked by specs 01–09 in `specs/`.
+
+Four catalog games have real engines: ROCAS (Asteroids), CAÍDA (Tetris), BLOQUE BUSTER (Arkanoid) and SERPENTINA (Snake). Every other catalog entry still runs a **simulation** in `GamePlayer` and never writes to `scores`.
 
 ## Commands
 
@@ -18,27 +20,75 @@ npm run lint    # runs ESLint directly (flat config); `next lint` no longer exis
 npx tsc --noEmit  # standalone type-check
 ```
 
-There is no test runner configured yet.
+There is no test runner. Verify with lint, `tsc`, `build`, and by playing in the browser (the Playwright MCP is available; its output goes to the git-ignored `.playwright-mcp/`).
+
+A PostToolUse hook (`.claude/hooks/format-and-lint.sh`, wired in `.claude/settings.json`) runs after every Write/Edit on project files. It deletes blank lines and trailing whitespace in code files (`.ts/.tsx/.js/.css/.json/.sh`, never Markdown), then runs `eslint --fix` and `prettier --write`. Unfixable lint errors come back as hook feedback. Do not reintroduce blank lines in code; the hook strips them.
+
+## Environment
+
+Copy `.env.example` to `.env.local`:
+
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: public by design. Read them with literal `process.env.NAME` access, because Next only inlines `NEXT_PUBLIC_*` that way.
+- `NEXT_PUBLIC_SITE_URL`: builds the password-reset link. It must also be in Supabase Auth's allowed redirect URLs.
+- `RESEND_API_KEY` (server only), plus optional `CONTACT_TO_EMAIL` / `CONTACT_FROM_EMAIL` for the About contact form.
+
+Never use `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Stack and conventions
 
 - **Next.js 16.3 (App Router only) + React 19.2.** The APIs differ from older Next.js versions. Before writing framework code, check the bundled docs in `node_modules/next/dist/docs/` (`01-app/` covers the App Router: getting-started, guides, api-reference).
 - **Typed route helpers are global.** `LayoutProps<"/">` / `PageProps<"/route">` come from types Next generates into `.next/types` (included via `tsconfig.json`). They need no import, and they only resolve after `next dev` or `next build` has run.
-- **Tailwind CSS v4**, configured CSS-first: there is no `tailwind.config.*`. Theme tokens live in `app/globals.css` under `@theme inline`, which maps the CSS variables `--background`/`--foreground` and the Geist font variables to Tailwind utilities (`bg-background`, `font-sans`, `font-mono`). Dark mode follows `prefers-color-scheme`. PostCSS uses `@tailwindcss/postcss`.
-- **Fonts**: Geist and Geist Mono load through `next/font/google` in `app/layout.tsx` and are exposed as CSS variables on `<html>`.
+- **Middleware is `proxy.ts`** (Next 16 renamed it) at the repo root. It calls `updateSession` in `lib/supabase/proxy.ts` to refresh the Supabase auth cookies on every non-static request.
+- **Tailwind CSS v4**, configured CSS-first: there is no `tailwind.config.*`. `app/globals.css` holds the Arcade Vault theme: `:root` tokens (`--bg`, `--ink`, `--cyan`, `--magenta`, `--gold`…) mapped under `@theme inline` to utilities (`bg-bg-2`, `text-cyan`, `font-pixel`, `font-mono`). The theme is dark only. Most UI uses the hand-written component classes in that file (`btn`, `modal`, `crt`, `hud-stat`, `toast-saved`, `av-*`…). Reuse them before adding new styles.
+- **Fonts**: Press Start 2P (`--pixel`, used for headings and pixel text), JetBrains Mono and Courier Prime (`--mono`) load through `next/font/google` in `app/layout.tsx`. `<html lang="es">`.
 - **Import alias**: `@/*` maps to the repo root (there is no `src/` directory).
-- ESLint uses `eslint-config-next` core-web-vitals + typescript presets (`eslint.config.mjs`).
-- **TypeScript**
+- ESLint uses `eslint-config-next` core-web-vitals + typescript presets (`eslint.config.mjs`). Prettier is a dev dependency, run by the hook.
+- **TypeScript** everywhere. Code comments are in Spanish.
+
+## Architecture
+
+### Routes (`app/`)
+
+| Route                                           | Purpose                                                                 |
+| ----------------------------------------------- | ----------------------------------------------------------------------- |
+| `/`                                             | Home (spec 02); static content in `lib/home.ts`                         |
+| `/about`                                        | About page plus a Resend contact form (`about/actions.ts`, spec 03)     |
+| `/juegos`                                       | Library with search and category filter (`LibraryBrowser`)              |
+| `/juegos/[id]`                                  | Game detail with its leaderboard                                        |
+| `/juegos/[id]/jugar`                            | Player (`GamePlayer`); `actions.ts` has the `saveScore` Server Action   |
+| `/salon`                                        | Hall of Fame (`HallOfFame`): top players, recent scores, per-game stats |
+| `/acceso`, `/acceso/nueva`, `/acceso/recuperar` | Sign-in/up, new password, password recovery (`acceso/actions.ts`)       |
+| `/auth/callback`                                | Supabase auth code exchange                                             |
+| `/api/supabase/health`                          | Connectivity check                                                      |
+
+### Supabase
+
+- Clients: `lib/supabase/server.ts` (Server Components/Actions, cookie-based), `lib/supabase/client.ts` (browser), `lib/supabase/proxy.ts` (session refresh).
+- On the server, check identity with `supabase.auth.getClaims()`, never `getSession()`. `lib/auth.ts#getCurrentProfile()` returns the signed-in `profiles` row or `null`, and the root layout passes it to `Nav`.
+- Data access goes through repos wrapped in `React.cache`: `lib/games-repo.ts` (`listGames`, `getGame`) and `lib/scores-repo.ts` (`getTopScores`, `getRecentScores`, `getTopPlayers`, `getGameStats`). They throw on error, and the caller decides what to render (see `CatalogError`). Plain types and helpers live in `lib/games.ts` and `lib/scores.ts`.
+- Schema (`supabase/migrations/`, all tables with RLS): `profiles` (created by the `handle_new_user` trigger on `auth.users`, public read), `games` (catalog, public read, ordered by `sort_order`), `scores` (public read; inserts limited to your own row, `user_id` defaults to `auth.uid()`, score 0–10,000,000), plus the views `game_stats` and `top_players`.
+- Migrations are immutable. Add a new timestamped file and never edit an applied one. Inspect the live schema (Supabase MCP `list_tables`) before changing it. Load the `supabase` and `supabase-postgres-best-practices` skills before writing SQL, RLS or Supabase client code.
+- Leaderboard rules (spec 08): no seeded or fake scores, no service-role key, and no `auth.users` emails exposed.
+
+### Game engines
+
+- Each game is a React-independent TypeScript engine in `lib/<game>/` (`engine.ts`, `types.ts`, and optionally `audio.ts`, `sprites.ts`, `levels.ts`). It draws on a `<canvas>` and talks to the platform only through the contract in `lib/engine/types.ts`: `CreateEngine(canvas, callbacks)` returns a `GameEngine` (`pause/resume/end/restart/setMuted/destroy`), and the callbacks are `onScore`, `onLives?`, `onLevel?` and `onGameOver`.
+- `components/games/registry.ts` maps a catalog id to its engine and its player config (canvas label, which HUD stats to show, sound toggle, controls text). `GamePlayer` + `GameCanvas` own the HUD, pause, the game-over modal and score saving through `saveScore`. An id without a registry entry falls back to the simulation.
+- ROCAS (`lib/asteroids/`, spec 05) is the reference implementation. The others are `lib/caida/`, `lib/bloque-buster/` and `lib/serpentina/` (spec 09).
+- `references/` holds source material, not app code: `started-games/` (original JS Asteroids/Tetris/Arkanoid to port), `source-assets/` (Snake sprites and audio) and `templates/` (the original JSX/HTML design mockups).
 
 ## Skills
 
 Usa siempre /frontend-design para diseñar la interfaz de usuario.
 
+Project skills live in `.agents/skills/` and are symlinked into `.claude/skills/`. Third-party ones are pinned in `skills-lock.json`.
+
+- `/arcade-game <id | references folder | description>` (project-authored): creates or ports a game as an engine that follows the contract above, registers it, and connects it to scores and the leaderboard. Use it whenever a game is added, ported or turned from a simulation into a real game. Its references cover the engine contract, the leaderboard foundation and notes on each reference game. Game branches are named after the spec or `game-<id>`.
+- `supabase` and `supabase-postgres-best-practices` (from `supabase/agent-skills`): load them before any Supabase or Postgres work. The Supabase MCP server is configured in `.mcp.json` for this project.
+
 ## Spec-driven workflow
 
-The project ships two user-invoked skills (installed under `.agents/skills/` and symlinked into `.claude/skills/`, tracked in `skills-lock.json`):
-
-- `/spec <feature>` designs a spec through clarifying questions and saves it to `specs/` (numbered `NN-name`). It does not write code.
+- `/spec <feature>` designs a spec through clarifying questions and saves it to `specs/` (numbered `NN-name`, with an `> **Estado:**` line). It does not write code.
 - `/spec-impl <NN-spec-name>` implements a spec whose status is "Approved". It creates and switches to a branch named after the spec (unless `specs/.spec-config.yml` sets `AutoCreateBranch: false`), then implements step by step, pausing for diff review.
 
-New features are expected to go through `/spec` and then `/spec-impl`. When a spec exists for the work, follow it.
+New features are expected to go through `/spec` and then `/spec-impl`. When a spec exists for the work, follow it. Work happens on branches and merges into `main` through PRs; never commit features straight to `main`.
