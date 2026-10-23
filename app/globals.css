@@ -533,6 +533,38 @@ a { color: inherit; text-decoration: none; }
   filter: drop-shadow(0 0 6px rgba(0,245,255,0.4));
 }
 
+/* PAPILLA: asfalto nocturno, carriles, huella de neumático y una rana hecha papilla */
+.cover-papilla { background:
+  radial-gradient(ellipse at 50% 48%, rgba(255,0,110,0.16), transparent 60%),
+  linear-gradient(180deg, #1a0614, #0a0a18); }
+.cover-papilla::before {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(245,255,0,0.7) 0 18px, transparent 18px 32px) 0 30%/100% 3px no-repeat,
+    repeating-linear-gradient(90deg, rgba(245,255,0,0.7) 0 18px, transparent 18px 32px) 9px 70%/100% 3px no-repeat,
+    linear-gradient(-28deg, transparent calc(50% - 12px), rgba(0,0,0,0.6) calc(50% - 12px) calc(50% - 9px), rgba(0,0,0,0.4) calc(50% - 9px) calc(50% + 9px), rgba(0,0,0,0.6) calc(50% + 9px) calc(50% + 12px), transparent calc(50% + 12px));
+}
+.cover-papilla::after {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 44% 46%, #000 0 1.5px, #fff 1.5px 2.5px, #000 2.5px 3.5px, #fff 3.5px 5px, transparent 5.5px),
+    radial-gradient(circle at 56% 44%, #000 0 1.5px, #fff 1.5px 2.5px, #000 2.5px 3.5px, #fff 3.5px 5px, transparent 5.5px),
+    radial-gradient(circle at 50% 50%, var(--green) 0 13px, transparent 14px),
+    radial-gradient(circle at 31% 38%, var(--magenta) 0 3px, transparent 4px),
+    radial-gradient(circle at 68% 33%, var(--magenta) 0 2px, transparent 3px),
+    radial-gradient(circle at 72% 62%, var(--magenta) 0 4px, transparent 5px),
+    radial-gradient(circle at 27% 64%, var(--magenta) 0 2px, transparent 3px),
+    radial-gradient(circle at 58% 72%, var(--magenta) 0 3px, transparent 4px),
+    radial-gradient(circle at 50% 50%, var(--magenta) 0 24px, transparent 25px),
+    radial-gradient(circle at 39% 44%, var(--magenta) 0 15px, transparent 16px),
+    radial-gradient(circle at 62% 56%, var(--magenta) 0 17px, transparent 18px),
+    radial-gradient(circle at 57% 39%, var(--magenta) 0 11px, transparent 12px),
+    radial-gradient(circle at 42% 60%, var(--magenta) 0 12px, transparent 13px);
+  filter: drop-shadow(0 0 10px rgba(255,0,110,0.6));
+}
+
 /* ===== detail screen ===== */
 .av-detail {
   display: grid;

@@ -1,6 +1,7 @@
 import { createAsteroidsGame } from "@/lib/asteroids/engine";
 import { createBloqueBusterGame } from "@/lib/bloque-buster/engine";
 import { createCaidaGame } from "@/lib/caida/engine";
+import { createPapillaGame } from "@/lib/papilla/engine";
 import { createSerpentinaGame } from "@/lib/serpentina/engine";
 import type { CreateEngine } from "@/lib/engine/types";
 export interface GameEntry {
@@ -39,5 +40,12 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
     hud: { lives: false, level: true },
     sound: true,
     controls: "← ↑ ↓ → / WASD GIRAR",
+  },
+  papilla: {
+    createEngine: createPapillaGame,
+    label: "Juego Papilla",
+    hud: { lives: true, level: true },
+    sound: true,
+    controls: "← ↑ ↓ → / WASD SALTAR",
   },
 };
