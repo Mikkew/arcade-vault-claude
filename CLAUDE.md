@@ -89,6 +89,7 @@ Project skills live in `.agents/skills/` and are symlinked into `.claude/skills/
 ## Subagents
 
 - `game-planner` (`.claude/agents/game-planner.md`): decides which game to add next or turn from a simulation into a real game, and scores the candidates against the engine contract, the leaderboard and the catalog balance. It writes no code. Its persistent memory of past suggestions and the user's decisions lives in `.claude/agent-memory/game-planner/`.
+- `game-jam` (`.claude/agents/game-jam.md`): takes a theme, designs one game from it and writes three Draft specs to `specs/game-jam/<game-id>/` (`01-catalogo`, `02-motor`, `03-pulido`), modeled on specs 07 and 09. It writes no code.
 
 ## Spec-driven workflow
 
