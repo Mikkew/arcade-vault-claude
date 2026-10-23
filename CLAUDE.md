@@ -86,6 +86,12 @@ Project skills live in `.agents/skills/` and are symlinked into `.claude/skills/
 - `/arcade-game <id | references folder | description>` (project-authored): creates or ports a game as an engine that follows the contract above, registers it, and connects it to scores and the leaderboard. Use it whenever a game is added, ported or turned from a simulation into a real game. Its references cover the engine contract, the leaderboard foundation and notes on each reference game. Game branches are named after the spec or `game-<id>`.
 - `supabase` and `supabase-postgres-best-practices` (from `supabase/agent-skills`): load them before any Supabase or Postgres work. The Supabase MCP server is configured in `.mcp.json` for this project.
 
+## Subagents
+
+- `game-planner` (`.claude/agents/game-planner.md`): decides which game to add next or turn from a simulation into a real game, and scores the candidates against the engine contract, the leaderboard and the catalog balance. It writes no code. Its persistent memory of past suggestions and the user's decisions lives in `.claude/agent-memory/game-planner/`.
+- `game-jam` (`.claude/agents/game-jam.md`): takes a theme, designs one game from it and writes three Draft specs to `specs/game-jam/<game-id>/` (`01-catalogo`, `02-motor`, `03-pulido`), modeled on specs 07 and 09. It writes no code.
+- `skin-designer` (`.claude/agents/skin-designer.md`): checks that every real game in the registry offers three skins, `clasico` (the default), `neon` and `retro`, and measures each palette's contrast on the dark background (WCAG: 4.5:1 for text/HUD, 3:1 for game objects). It writes Draft specs to `specs/skins/`: `00-sistema-skins` for the shared skin system, then one spec per game that falls short. It writes no code.
+
 ## Spec-driven workflow
 
 - `/spec <feature>` designs a spec through clarifying questions and saves it to `specs/` (numbered `NN-name`, with an `> **Estado:**` line). It does not write code.

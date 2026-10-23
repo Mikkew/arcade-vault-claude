@@ -52,7 +52,9 @@ const randomPiece = (): Piece => {
 const rotateCW = (shape: number[][]): number[][] => {
   const rows = shape.length;
   const cols = shape[0].length;
-  const result = Array.from({ length: cols }, () => new Array<number>(rows).fill(0));
+  const result = Array.from({ length: cols }, () =>
+    new Array<number>(rows).fill(0),
+  );
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) result[c][rows - 1 - r] = shape[r][c];
   return result;
@@ -129,7 +131,10 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
       level = newLevel;
       callbacks.onLevel?.(level);
     }
-    dropInterval = Math.max(MIN_DROP_MS, BASE_DROP_MS - (level - 1) * DROP_STEP_MS);
+    dropInterval = Math.max(
+      MIN_DROP_MS,
+      BASE_DROP_MS - (level - 1) * DROP_STEP_MS,
+    );
   };
   const spawn = () => {
     current = next;
@@ -239,7 +244,12 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
     ctx.stroke();
     ctx.strokeStyle = FRAME_COLOR;
     ctx.lineWidth = 2;
-    ctx.strokeRect(BOARD_X - 1, BOARD_Y + 1, COLS * BLOCK + 2, ROWS * BLOCK - 2);
+    ctx.strokeRect(
+      BOARD_X - 1,
+      BOARD_Y + 1,
+      COLS * BLOCK + 2,
+      ROWS * BLOCK - 2,
+    );
     for (let r = 0; r < ROWS; r++)
       for (let c = 0; c < COLS; c++)
         drawBlock(BOARD_X + c * BLOCK, BOARD_Y + r * BLOCK, board[r][c]);
@@ -256,7 +266,11 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
     const offY = Math.floor((4 - next.shape.length) / 2);
     for (let r = 0; r < next.shape.length; r++)
       for (let c = 0; c < next.shape[r].length; c++)
-        drawBlock(PANEL_X + (offX + c) * BLOCK, 56 + (offY + r) * BLOCK, next.shape[r][c]);
+        drawBlock(
+          PANEL_X + (offX + c) * BLOCK,
+          56 + (offY + r) * BLOCK,
+          next.shape[r][c],
+        );
     drawLabel("LÍNEAS", String(lines), 230);
   };
   const frame = (now: number) => {
@@ -305,6 +319,7 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
       last = performance.now();
     },
     setMuted() {}, // sin sonido
+    setSkin() {}, // sin paletas todavía: tendrá su propio spec en specs/skins/
     destroy() {
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);
