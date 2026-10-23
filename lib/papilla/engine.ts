@@ -742,6 +742,7 @@ export const createPapillaGame: CreateEngine = (canvas, callbacks) => {
     setMuted(m) {
       audio.setMuted(m);
     },
+    setSkin() {}, // sin paletas todavía: tendrá su propio spec en specs/skins/
     destroy() {
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);

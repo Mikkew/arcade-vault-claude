@@ -1,27 +1,24 @@
 // ===== engine.ts — bucle, estado, entrada y dibujo de Serpentina (Snake) =====
 // Independiente de React. Se comunica con el HUD de la plataforma por callbacks.
+import { drawScanlines, withGlow } from "@/lib/engine/skin-fx";
+import { DEFAULT_SKIN } from "@/lib/engine/skins";
 import type { CreateEngine } from "@/lib/engine/types";
 import { createAudio } from "./audio";
-import { FRUIT_FRAMES } from "./sprites";
+import { PALETTES } from "./palettes";
+import { FRUIT_FRAMES, STRIP_Y, buildFruitStrip } from "./sprites";
 import {
   BASE_TICK,
-  BG_COLOR,
   CELL,
   COLS,
-  FALLBACK_FRUIT_COLOR,
   FRUIT_PADDING,
   FRUIT_POINTS,
   FRUITS_PER_LEVEL,
-  GRID_COLOR,
   H,
   MAX_DT,
   MAX_INPUT_QUEUE,
   MAX_LEVEL,
   MIN_TICK,
   ROWS,
-  SNAKE_COLOR,
-  SNAKE_DEAD_COLOR,
-  SNAKE_HEAD_COLOR,
   SPRITE_URL,
   START_LENGTH,
   TICK_STEP,
@@ -52,7 +49,9 @@ const OPPOSITE: Record<Dir, Dir> = {
   left: "right",
   right: "left",
 };
-export const createSerpentinaGame: CreateEngine = (canvas, callbacks) => {
+export const createSerpentinaGame: CreateEngine = (canvas, callbacks, skin) => {
+  // Paleta del skin activo; restart() y reset() no la tocan
+  let pal = PALETTES[skin ?? DEFAULT_SKIN];
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No se pudo obtener el contexto 2D del canvas");
   canvas.width = W;
@@ -74,9 +73,21 @@ export const createSerpentinaGame: CreateEngine = (canvas, callbacks) => {
   const audio = createAudio();
   // Sin spritesheet las frutas se pintan como círculos: el juego no espera a la imagen
   let sheet: HTMLImageElement | null = null;
+  // Tiras de frutas recoloreadas, una por modo ("lift" | "phosphor")
+  const strips = new Map<string, HTMLCanvasElement>();
+  const ensureStrip = () => {
+    if (!sheet || strips.has(pal.fruit.mode)) return;
+    try {
+      strips.set(pal.fruit.mode, buildFruitStrip(sheet, pal.fruit, pal.bg));
+    } catch {
+      // Canvas contaminado u otro fallo: se dibuja la imagen original
+    }
+  };
   const img = new Image();
   img.onload = () => {
-    if (!destroyed) sheet = img;
+    if (destroyed) return;
+    sheet = img;
+    ensureStrip();
   };
   img.src = SPRITE_URL;
   const isEditable = (t: EventTarget | null) =>
@@ -178,29 +189,34 @@ export const createSerpentinaGame: CreateEngine = (canvas, callbacks) => {
     const px = fruit.x * CELL;
     const py = fruit.y * CELL;
     const box = CELL - FRUIT_PADDING * 2;
+    const blur = pal.blur.fruit * pal.fx.glow;
     if (!sheet) {
-      ctx.fillStyle = FALLBACK_FRUIT_COLOR;
+      ctx.fillStyle = pal.fruitFallback;
       ctx.beginPath();
       ctx.arc(px + CELL / 2, py + CELL / 2, box / 2, 0, Math.PI * 2);
-      ctx.fill();
+      withGlow(ctx, pal.fruitGlow, blur, () => ctx.fill());
       return;
     }
     const f: Frame = FRUIT_FRAMES[fruitFrame];
+    const strip = strips.get(pal.fruit.mode);
+    const source = strip ?? sheet;
     // Conserva la proporción del recorte dentro de la celda
     const scale = Math.min(box / f.sw, box / f.sh);
     const dw = f.sw * scale;
     const dh = f.sh * scale;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(
-      sheet,
-      f.sx,
-      f.sy,
-      f.sw,
-      f.sh,
-      px + (CELL - dw) / 2,
-      py + (CELL - dh) / 2,
-      dw,
-      dh,
+    withGlow(ctx, pal.fruitGlow, blur, () =>
+      ctx.drawImage(
+        source,
+        f.sx,
+        strip ? f.sy - STRIP_Y : f.sy,
+        f.sw,
+        f.sh,
+        px + (CELL - dw) / 2,
+        py + (CELL - dh) / 2,
+        dw,
+        dh,
+      ),
     );
   };
   const drawEyes = (head: Cell) => {
@@ -210,24 +226,25 @@ export const createSerpentinaGame: CreateEngine = (canvas, callbacks) => {
     // Los ojos se separan en el eje perpendicular a la marcha
     const px = -d.y;
     const py = d.x;
-    ctx.fillStyle = "#05070d";
+    ctx.fillStyle = pal.eyes;
+    const r = pal.eyeSize;
     for (const side of [-1, 1]) {
+      const ex = cx + d.x * 7 + px * side * 7;
+      const ey = cy + d.y * 7 + py * side * 7;
+      if (pal.eyeShape === "square") {
+        ctx.fillRect(ex - r, ey - r, r * 2, r * 2);
+        continue;
+      }
       ctx.beginPath();
-      ctx.arc(
-        cx + d.x * 7 + px * side * 7,
-        cy + d.y * 7 + py * side * 7,
-        3.5,
-        0,
-        Math.PI * 2,
-      );
+      ctx.arc(ex, ey, r, 0, Math.PI * 2);
       ctx.fill();
     }
   };
   const draw = () => {
-    ctx.fillStyle = BG_COLOR;
+    ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = GRID_COLOR;
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = pal.grid;
+    ctx.lineWidth = pal.gridLine;
     ctx.beginPath();
     for (let x = 1; x < COLS; x++) {
       ctx.moveTo(x * CELL + 0.5, 0);
@@ -239,28 +256,52 @@ export const createSerpentinaGame: CreateEngine = (canvas, callbacks) => {
     }
     ctx.stroke();
     drawFruit();
-    ctx.shadowColor = over ? SNAKE_DEAD_COLOR : SNAKE_COLOR;
-    ctx.shadowBlur = 10;
-    for (let i = snake.length - 1; i >= 0; i--) {
+    const color = over ? pal.dead : pal.body;
+    const blur = pal.blur.snake * pal.fx.glow;
+    const segment = (i: number) => {
       const s = snake[i];
       const inset = i === 0 ? 2 : 4;
-      ctx.fillStyle = over
-        ? SNAKE_DEAD_COLOR
-        : i === 0
-          ? SNAKE_HEAD_COLOR
-          : SNAKE_COLOR;
-      ctx.beginPath();
       ctx.roundRect(
         s.x * CELL + inset,
         s.y * CELL + inset,
         CELL - inset * 2,
         CELL - inset * 2,
-        6,
+        pal.radius,
       );
-      ctx.fill();
+    };
+    if (pal.bodyStyle === "outline") {
+      // El cuerpo es un solo path: dos pasadas de sombra por frame, no dos por segmento
+      ctx.beginPath();
+      for (let i = snake.length - 1; i >= 1; i--) segment(i);
+      withGlow(ctx, color, blur, () => {
+        ctx.globalAlpha = pal.bodyFillAlpha;
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = pal.line.body;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+      });
+      // La cabeza siempre es sólida
+      ctx.beginPath();
+      segment(0);
+      ctx.fillStyle = over ? pal.dead : pal.head;
+      withGlow(ctx, color, blur, () => ctx.fill());
+    } else {
+      // Segmento a segmento, de la cola a la cabeza, dentro de un único brillo
+      withGlow(ctx, color, blur, () => {
+        for (let i = snake.length - 1; i >= 0; i--) {
+          ctx.fillStyle = over ? pal.dead : i === 0 ? pal.head : pal.body;
+          ctx.beginPath();
+          segment(i);
+          ctx.fill();
+        }
+      });
     }
-    ctx.shadowBlur = 0;
+    // Los ojos van sin brillo
     drawEyes(snake[0]);
+    // Scanlines del skin retro, encima de todo
+    drawScanlines(ctx, W, H, pal.fx.scanlines);
   };
   const frame = (now: number) => {
     const dt = Math.min((now - last) / 1000, MAX_DT);
@@ -295,12 +336,19 @@ export const createSerpentinaGame: CreateEngine = (canvas, callbacks) => {
     setMuted(m) {
       audio.setMuted(m);
     },
+    // El bucle sigue dibujando en pausa y tras el game over: no hace falta redibujar
+    setSkin(s) {
+      if (destroyed) return;
+      pal = PALETTES[s] ?? PALETTES.clasico;
+      ensureStrip();
+    },
     destroy() {
       destroyed = true;
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("blur", onBlur);
       img.onload = null;
+      strips.clear();
       audio.destroy();
     },
   };

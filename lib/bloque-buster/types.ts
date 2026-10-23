@@ -52,16 +52,4 @@ export const EXPLOSION_DURATION = 150; // ms
 export const SPRITE_URL = "/games/bloque-buster/spritesheet-breakout.png";
 export const BOUNCE_SOUND_URL = "/games/bloque-buster/ball-bounce.mp3";
 export const BREAK_SOUND_URL = "/games/bloque-buster/break-sound.mp3";
-// Colores de reserva si el spritesheet no carga (paleta neón del CRT)
-export const FALLBACK_COLORS: Record<BlockColor, string> = {
-  red: "#ff4d4d",
-  yellow: "#ffe600",
-  cyan: "#00f0ff",
-  magenta: "#ff2bd6",
-  hotpink: "#ff69b4",
-  green: "#39ff14",
-  gray: "#8a8fa3",
-};
-export const PADDLE_COLOR = "#00f0ff";
-export const BALL_COLOR = "#ffffff";
-export const BG_COLOR = "#000000";
+// Los colores de cada skin (y los de reserva sin spritesheet) viven en palettes.ts

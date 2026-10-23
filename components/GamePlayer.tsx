@@ -1,16 +1,31 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import GameCanvas from "@/components/GameCanvas";
 import { GAME_REGISTRY } from "@/components/games/registry";
 import { saveScore } from "@/app/juegos/[id]/jugar/actions";
 import type { GameCallbacks, GameEngine } from "@/lib/engine/types";
+import { DEFAULT_SKIN, SKINS, type SkinId } from "@/lib/engine/skins";
+import {
+  readSkin,
+  subscribeSkin,
+  writeSkin,
+} from "@/lib/engine/skin-preference";
 interface GamePlayerProps {
   id: string;
   title: string;
   isLoggedIn: boolean;
 }
 type SaveStatus = "idle" | "saving" | "saved" | "error" | "unauthenticated";
+// Las simulaciones no tienen skins: solo el clásico.
+const NO_SKINS: SkinId[] = [DEFAULT_SKIN];
 export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -29,10 +44,24 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
   const gameRef = useRef<GameEngine | null>(null);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
+  // Skin guardado por juego; en el servidor siempre es el clásico (sin desajuste de hidratación).
+  const allowedSkins = entry?.skins ?? NO_SKINS;
+  const skin = useSyncExternalStore(
+    subscribeSkin,
+    () => readSkin(id, allowedSkins),
+    () => DEFAULT_SKIN,
+  );
+  const skinRef = useRef(skin);
   const handleReady = useCallback((game: GameEngine | null) => {
     gameRef.current = game;
     game?.setMuted(mutedRef.current); // un motor nuevo hereda la preferencia actual
+    game?.setSkin(skinRef.current);
   }, []);
+  // Cambio de skin en caliente: el motor no se recrea y la partida sigue.
+  useEffect(() => {
+    skinRef.current = skin;
+    gameRef.current?.setSkin(skin);
+  }, [skin]);
   const callbacks = useMemo<GameCallbacks>(
     () => ({
       onScore: setScore,
@@ -71,6 +100,7 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
     setMuted(next);
     gameRef.current?.setMuted(next);
   };
+  const selectSkin = (next: SkinId) => writeSkin(id, next);
   const endGame = () => {
     if (isReal) gameRef.current?.end();
     else setOver(true);
@@ -139,6 +169,30 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
               <div className="v">{String(level).padStart(2, "0")}</div>
             </div>
           )}
+          {entry && entry.skins.length > 1 && (
+            <div className="hud-stat">
+              <div className="l" id="skin-label">
+                Skin
+              </div>
+              <div
+                className="skin-picker"
+                role="group"
+                aria-labelledby="skin-label"
+              >
+                {SKINS.filter((s) => entry.skins.includes(s.id)).map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className="btn ghost"
+                    aria-pressed={skin === s.id}
+                    onClick={() => selectSkin(s.id)}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="hud-actions">
           <button type="button" className="btn yellow" onClick={togglePause}>
@@ -169,6 +223,7 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
               createEngine={entry.createEngine}
               callbacks={callbacks}
               label={entry.label}
+              skin={skin}
               onReady={handleReady}
             />
           ) : (

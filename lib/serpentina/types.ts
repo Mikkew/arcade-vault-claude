@@ -27,10 +27,4 @@ export const FRUIT_POINTS = 10; // por nivel: comer en el nivel n suma 10·n
 export const MAX_INPUT_QUEUE = 2; // giros pendientes
 export const SPRITE_URL = "/games/serpentina/fruits.png";
 export const FRUIT_PADDING = 3; // px entre la fruta y el borde de la celda
-// Paleta neón del CRT
-export const BG_COLOR = "#05070d";
-export const GRID_COLOR = "rgba(57, 255, 20, 0.06)";
-export const SNAKE_COLOR = "#39ff14";
-export const SNAKE_HEAD_COLOR = "#b6ff9e";
-export const SNAKE_DEAD_COLOR = "#ff2b4d";
-export const FALLBACK_FRUIT_COLOR = "#ff2bd6";
+// Los colores de cada skin viven en palettes.ts

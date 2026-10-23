@@ -657,6 +657,16 @@ a { color: inherit; text-decoration: none; }
 .hud-stat.lives .v { color: var(--magenta); text-shadow: 0 0 6px rgba(255,0,110,0.5); }
 .hud-stat.level .v { color: var(--yellow); text-shadow: 0 0 6px rgba(245,255,0,0.5); }
 .hud-actions { display: flex; gap: 10px; }
+/* selector de skin: tres botones ghost compactos; el activo se enciende en cian */
+.skin-picker { display: flex; gap: 6px; }
+.skin-picker .btn { padding: 7px 10px; font-size: 8px; letter-spacing: 0.12em; }
+.skin-picker .btn[aria-pressed="true"] {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  text-shadow: 0 0 6px rgba(0,245,255,0.5);
+  box-shadow: inset 0 0 8px rgba(0,245,255,0.25);
+}
+.skin-picker .btn:focus-visible { outline: 1px dashed var(--yellow); outline-offset: 2px; }
 
 .crt {
   position: relative;

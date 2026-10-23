@@ -1,7 +1,10 @@
 // ===== engine.ts — bucle, estado, entrada y dibujo de Bloque Buster (Arkanoid) =====
 // Independiente de React. Se comunica con el HUD de la plataforma por callbacks.
+import { drawScanlines, withGlow } from "@/lib/engine/skin-fx";
+import { DEFAULT_SKIN } from "@/lib/engine/skins";
 import type { CreateEngine } from "@/lib/engine/types";
 import { LEVELS } from "./levels";
+import { PALETTES } from "./palettes";
 import {
   BALL_SPRITE,
   BLOCK_SPRITES,
@@ -9,11 +12,9 @@ import {
   PADDLE_SPRITE,
 } from "./sprites";
 import {
-  BALL_COLOR,
   BASE_BALL_VX,
   BASE_BALL_VY,
   BALL_SIZE,
-  BG_COLOR,
   BLOCK_H,
   BLOCK_POINTS,
   BLOCK_W,
@@ -22,11 +23,9 @@ import {
   BOUNCE_SOUND_URL,
   BREAK_SOUND_URL,
   EXPLOSION_DURATION,
-  FALLBACK_COLORS,
   H,
   MAX_DT,
   PADDLE_BOUNCE_MARGIN,
-  PADDLE_COLOR,
   PADDLE_H,
   PADDLE_SPEED,
   PADDLE_W,
@@ -44,7 +43,13 @@ import {
 const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight"]);
 const collideAABB = (a: Rect, b: Rect) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-export const createBloqueBusterGame: CreateEngine = (canvas, callbacks) => {
+export const createBloqueBusterGame: CreateEngine = (
+  canvas,
+  callbacks,
+  skin,
+) => {
+  // Paleta del skin activo; reset(), restart() y loadLevel() no la tocan
+  let pal = PALETTES[skin ?? DEFAULT_SKIN];
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No se pudo obtener el contexto 2D del canvas");
   canvas.width = W;
@@ -232,29 +237,128 @@ export const createBloqueBusterGame: CreateEngine = (canvas, callbacks) => {
     );
     return true;
   };
+  // Caja plana: relleno sólido, o trazo con relleno translúcido si `line` > 0.
+  // El brillo (`blur`) solo se aplica al trazo, nunca al relleno.
+  const drawBox = (r: Rect, color: string, line: number, blur = 0) => {
+    if (line <= 0) {
+      ctx.fillStyle = color;
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      return;
+    }
+    ctx.save();
+    ctx.globalAlpha = pal.fillAlpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.restore();
+    // El trazo se dibuja hacia dentro para no salir de la caja
+    ctx.lineWidth = line;
+    ctx.strokeStyle = color;
+    withGlow(ctx, color, blur * pal.fx.glow, () =>
+      ctx.strokeRect(r.x + line / 2, r.y + line / 2, r.w - line, r.h - line),
+    );
+  };
+  const insetRect = (r: Rect, inset: number): Rect => ({
+    x: r.x + inset,
+    y: r.y + inset,
+    w: r.w - inset * 2,
+    h: r.h - inset * 2,
+  });
+  const drawBlock = (block: Block) => {
+    if (pal.sprites && drawFrame(BLOCK_SPRITES[block.color], block)) {
+      // Velo de corrección de contraste sobre el sprite (solo la piedra en clásico)
+      const tint = pal.spriteTint[block.color];
+      if (tint) {
+        ctx.fillStyle = tint;
+        ctx.fillRect(block.x, block.y, block.w, block.h);
+      }
+      return;
+    }
+    const line = pal.blockStyle === "outline" ? pal.line.block : 0;
+    drawBox(
+      insetRect(block, pal.blockInset),
+      pal.blocks[block.color],
+      line,
+      pal.blur.block,
+    );
+  };
+  const drawExplosion = (exp: Explosion) => {
+    const t = Math.min(exp.elapsed / EXPLOSION_DURATION, 1);
+    const i = Math.min(Math.floor(t * 4), 3);
+    const color = pal.blocks[exp.color];
+    if (pal.explosion === "sprite") {
+      if (pal.sprites) drawFrame(EXPLOSION_FRAMES[exp.color][i], exp);
+      return;
+    }
+    if (pal.explosion === "fade") {
+      // El margen crece hacia el centro y el trazo se desvanece; nunca sale de la celda
+      const m = pal.blockInset + (exp.h / 2 - pal.blockInset) * t;
+      const line = pal.line.explosion;
+      ctx.save();
+      ctx.globalAlpha = 1 - t;
+      ctx.lineWidth = line;
+      ctx.strokeStyle = color;
+      ctx.strokeRect(
+        exp.x + m + line / 2,
+        exp.y + m + line / 2,
+        Math.max(0, exp.w - m * 2 - line),
+        Math.max(0, exp.h - m * 2 - line),
+      );
+      ctx.restore();
+      return;
+    }
+    // "steps": rectángulo plano que encoge hacia el centro en 4 pasos
+    const scale = 1 - i * 0.25;
+    const r = insetRect(exp, pal.blockInset);
+    const w = r.w * scale;
+    const h = r.h * scale;
+    ctx.fillStyle = color;
+    ctx.fillRect(r.x + (r.w - w) / 2, r.y + (r.h - h) / 2, w, h);
+  };
+  const drawPaddle = () => {
+    if (pal.sprites && drawFrame(PADDLE_SPRITE, paddle)) return;
+    drawBox(paddle, pal.paddle, pal.line.paddle, pal.blur.paddle);
+    if (!pal.paddleAccent) return;
+    // Extremos de 8 px, como el Vaus original
+    const end = { ...paddle, w: 8 };
+    drawBox(end, pal.paddleAccent, pal.line.paddle, pal.blur.paddle);
+    drawBox(
+      { ...end, x: paddle.x + paddle.w - 8 },
+      pal.paddleAccent,
+      pal.line.paddle,
+      pal.blur.paddle,
+    );
+  };
+  const drawBall = () => {
+    if (pal.sprites && drawFrame(BALL_SPRITE, ball)) return;
+    ctx.fillStyle = pal.ball;
+    const blur = pal.blur.ball * pal.fx.glow;
+    if (pal.ballShape === "circle") {
+      // Solo dibujo: la colisión sigue siendo la caja de 16×16
+      ctx.beginPath();
+      ctx.arc(
+        ball.x + ball.w / 2,
+        ball.y + ball.h / 2,
+        ball.w / 2,
+        0,
+        Math.PI * 2,
+      );
+      withGlow(ctx, pal.ball, blur, () => ctx.fill());
+    } else {
+      withGlow(ctx, pal.ball, blur, () =>
+        ctx.fillRect(ball.x, ball.y, ball.w, ball.h),
+      );
+    }
+  };
   const draw = () => {
-    ctx.fillStyle = BG_COLOR;
+    ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
     if (!ready) return;
-    for (const block of blocks) {
-      if (!block.alive) continue;
-      if (!drawFrame(BLOCK_SPRITES[block.color], block)) {
-        ctx.fillStyle = FALLBACK_COLORS[block.color];
-        ctx.fillRect(block.x + 1, block.y + 1, block.w - 2, block.h - 2);
-      }
-    }
-    for (const exp of explosions) {
-      const i = Math.min(Math.floor((exp.elapsed / EXPLOSION_DURATION) * 4), 3);
-      drawFrame(EXPLOSION_FRAMES[exp.color][i], exp);
-    }
-    if (!drawFrame(PADDLE_SPRITE, paddle)) {
-      ctx.fillStyle = PADDLE_COLOR;
-      ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
-    }
-    if (!drawFrame(BALL_SPRITE, ball)) {
-      ctx.fillStyle = BALL_COLOR;
-      ctx.fillRect(ball.x, ball.y, ball.w, ball.h);
-    }
+    for (const block of blocks) if (block.alive) drawBlock(block);
+    for (const exp of explosions) drawExplosion(exp);
+    drawPaddle();
+    drawBall();
+    // Scanlines del skin retro, encima de todo
+    drawScanlines(ctx, W, H, pal.fx.scanlines);
   };
   const frame = (now: number) => {
     const dt = Math.min((now - last) / 1000, MAX_DT);
@@ -304,6 +408,11 @@ export const createBloqueBusterGame: CreateEngine = (canvas, callbacks) => {
     },
     setMuted(m) {
       muted = m;
+    },
+    // El bucle dibuja cada frame aunque esté en pausa: el cambio se ve al instante
+    setSkin(s) {
+      if (destroyed) return;
+      pal = PALETTES[s] ?? PALETTES.clasico;
     },
     destroy() {
       destroyed = true;

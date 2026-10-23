@@ -90,6 +90,7 @@ Project skills live in `.agents/skills/` and are symlinked into `.claude/skills/
 
 - `game-planner` (`.claude/agents/game-planner.md`): decides which game to add next or turn from a simulation into a real game, and scores the candidates against the engine contract, the leaderboard and the catalog balance. It writes no code. Its persistent memory of past suggestions and the user's decisions lives in `.claude/agent-memory/game-planner/`.
 - `game-jam` (`.claude/agents/game-jam.md`): takes a theme, designs one game from it and writes three Draft specs to `specs/game-jam/<game-id>/` (`01-catalogo`, `02-motor`, `03-pulido`), modeled on specs 07 and 09. It writes no code.
+- `skin-designer` (`.claude/agents/skin-designer.md`): checks that every real game in the registry offers three skins, `clasico` (the default), `neon` and `retro`, and measures each palette's contrast on the dark background (WCAG: 4.5:1 for text/HUD, 3:1 for game objects). It writes Draft specs to `specs/skins/`: `00-sistema-skins` for the shared skin system, then one spec per game that falls short. It writes no code.
 
 ## Spec-driven workflow
 

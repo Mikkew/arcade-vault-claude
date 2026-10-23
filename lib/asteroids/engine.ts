@@ -1,6 +1,9 @@
 // ===== engine.ts — bucle, estado, colisiones, entrada y dibujo de Asteroides =====
 // Independiente de React. Se comunica con el HUD de la plataforma por callbacks.
+import { drawScanlines, withGlow } from "@/lib/engine/skin-fx";
+import { DEFAULT_SKIN, type SkinId } from "@/lib/engine/skins";
 import { createAudio } from "./audio";
+import { PALETTES } from "./palettes";
 import {
   Asteroid,
   Bullet,
@@ -32,7 +35,10 @@ const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "Space"]);
 export function createAsteroidsGame(
   canvas: HTMLCanvasElement,
   callbacks: AsteroidsCallbacks,
+  skin?: SkinId,
 ): AsteroidsGame {
+  // Paleta del skin activo; restart() e initGame() no la tocan
+  let pal = PALETTES[skin ?? DEFAULT_SKIN];
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No se pudo obtener el contexto 2D del canvas");
   canvas.width = W;
@@ -245,21 +251,25 @@ export function createAsteroidsGame(
   // ── Dibujo (sin HUD: puntuación, vidas y nivel los pinta la plataforma) ──
   function draw() {
     if (!ctx) return;
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
-    particles.forEach((p) => p.draw(ctx));
-    asteroids.forEach((a) => a.draw(ctx));
-    powerUps.forEach((p) => p.draw(ctx));
-    bullets.forEach((b) => b.draw(ctx));
-    ship.draw(ctx);
+    particles.forEach((p) => p.draw(ctx, pal));
+    asteroids.forEach((a) => a.draw(ctx, pal));
+    powerUps.forEach((p) => p.draw(ctx, pal));
+    bullets.forEach((b) => b.draw(ctx, pal));
+    ship.draw(ctx, pal);
     // Temporizador del power-up: el HUD de la plataforma no tiene campo para esto
     if (ship.tripleShot > 0) {
-      ctx.font = "15px monospace";
+      ctx.font = pal.hudFont;
       ctx.textAlign = "left";
       ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = "#0ff";
-      ctx.fillText(`3x  ${ship.tripleShot.toFixed(1)}s`, 14, 26);
+      ctx.fillStyle = pal.hud;
+      withGlow(ctx, pal.hud, pal.blur.hud * pal.fx.glow, () =>
+        ctx.fillText(`3x  ${ship.tripleShot.toFixed(1)}s`, 14, 26),
+      );
     }
+    // Scanlines del skin retro, encima de todo (también del temporizador)
+    drawScanlines(ctx, W, H, pal.fx.scanlines);
   }
   // ── Bucle ──
   let rafId: number | null = null;
@@ -308,6 +318,11 @@ export function createAsteroidsGame(
     },
     setMuted(muted) {
       audio.setMuted(muted);
+    },
+    setSkin(s) {
+      pal = PALETTES[s] ?? PALETTES.clasico;
+      // Sin bucle activo (en pausa) se redibuja un frame para que el cambio se vea
+      if (!destroyed && rafId === null) draw();
     },
     destroy() {
       destroyed = true;
