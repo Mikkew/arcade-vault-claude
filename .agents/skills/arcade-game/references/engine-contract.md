@@ -16,6 +16,9 @@ Basado en la spec 05 (ROCAS) y en `lib/asteroids/`. Léelo junto con `lib/astero
 `lib/engine/types.ts` (o el nombre que ya tenga el repo si alguien lo extrajo antes):
 
 ```ts
+// Mando táctil genérico (spec 10): cruceta + dos botones
+export type TouchAction = "up" | "down" | "left" | "right" | "a" | "b";
+
 export interface GameCallbacks {
   onScore: (score: number) => void;
   onLives?: (lives: number) => void; // solo juegos con vidas
@@ -29,22 +32,36 @@ export interface GameEngine {
   end(): void; // termina la partida y dispara onGameOver
   restart(): void; // partida nueva, estado de recién creado
   setMuted(muted: boolean): void; // no-op si no hay sonido
+  setSkin(skin: SkinId): void; // cambia la paleta en caliente; no toca estado ni puntuación
+  setInput(action: TouchAction, pressed: boolean): void; // pulsar/soltar; ignora acciones que el juego no usa
   destroy(): void; // cancela loop, quita listeners, cierra audio
 }
 
-export type CreateEngine = (canvas: HTMLCanvasElement, callbacks: GameCallbacks) => GameEngine;
+export type CreateEngine = (canvas: HTMLCanvasElement, callbacks: GameCallbacks, skin?: SkinId) => GameEngine;
 ```
 
 `onLives` y `onLevel` son opcionales para no obligar a un Tetris (sin vidas) a mentir. El HUD decide qué mostrar según el registro.
+
+`setInput` es obligatorio: es la entrada táctil (spec 10). Los botones en pantalla del player (`components/TouchControls.tsx`) lo llaman con `pressed=true` al pulsar y `false` al soltar, una vez por cambio. Cada acción debe tener **el mismo efecto que su tecla**:
+
+- Acciones mantenidas (girar, impulso, mover pala): `pressed` equivale a `keydown`/`keyup` de la tecla.
+- Acciones de un golpe (disparar, rotar, caída dura): actúan solo al pulsar y no se repiten mientras se mantiene.
+- Movimientos que con teclado dependen de la autorrepetición del sistema (mover en Tetris): el motor repite por su cuenta mientras se mantiene (CAÍDA: 170 ms de retardo, 50 ms de cadencia) y cancela el temporizador en `pause`, `end`, `restart`, `destroy` y al soltar.
+- Juegos de giros o saltos en cola (Snake, Frogger): cada pulsación encola con las mismas reglas que `keydown` sin `repeat`; soltar no hace nada.
+- Con el juego en pausa o terminado, `pressed=true` se ignora; soltar siempre se aplica para que nada quede pegado.
 
 ## 2. Esqueleto de un motor
 
 ```ts
 // lib/<id>/engine.ts
 import { W, H, MAX_DT } from "./types";
-import type { CreateEngine } from "@/lib/engine/types";
+import type { CreateEngine, TouchAction } from "@/lib/engine/types";
 
 const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"]);
+// Cada acción táctil equivale a una de esas teclas
+const TOUCH_KEYS: Partial<Record<TouchAction, string>> = {
+  left: "ArrowLeft", right: "ArrowRight", up: "ArrowUp", down: "ArrowDown", a: "Space",
+};
 
 export const createXGame: CreateEngine = (canvas, callbacks) => {
   const ctx = canvas.getContext("2d");
@@ -94,6 +111,14 @@ export const createXGame: CreateEngine = (canvas, callbacks) => {
     end() { if (!over) { over = true; callbacks.onGameOver(score); } },
     restart() { over = false; paused = false; reset(); last = performance.now(); },
     setMuted(m) { /* … */ },
+    setSkin(s) { /* … */ },
+    // Misma lógica que el teclado: extrae el manejo de cada tecla a una función y llámala desde aquí
+    setInput(action, pressed) {
+      const code = TOUCH_KEYS[action];
+      if (!code) return;
+      if (pressed && (paused || over)) return;
+      keys[code] = pressed;
+    },
     destroy() {
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);
@@ -157,12 +182,26 @@ export interface GameEntry {
   label: string;          // aria-label del canvas
   hud: { lives: boolean; level: boolean };
   sound: boolean;         // muestra el botón SILENCIAR
-  controls?: string;      // texto breve de controles para mostrar bajo el CRT
+  controls: string;       // texto breve de controles para mostrar bajo el CRT
+  skins: SkinId[];        // skins disponibles; el selector solo aparece con más de uno
+  touch: TouchLayout;     // mando táctil bajo el CRT (spec 10)
+}
+// Solo se ve con puntero grueso (móvil, tablet); las filas sin flecha colapsan
+export interface TouchLayout {
+  dpad: Exclude<TouchAction, "a" | "b">[]; // flechas visibles de la cruceta
+  a?: string; // etiqueta del botón A; sin valor no se pinta
+  b?: string; // etiqueta del botón B
 }
 export const GAME_REGISTRY: Record<string, GameEntry> = {
-  rocas: { createEngine: createAsteroidsGame, label: "Juego Rocas", hud: { lives: true, level: true }, sound: true },
+  rocas: {
+    createEngine: createAsteroidsGame, label: "Juego Rocas", hud: { lives: true, level: true }, sound: true,
+    controls: "← → GIRAR · ↑ IMPULSO · ESPACIO DISPARAR", skins: ["clasico", "neon", "retro"],
+    touch: { dpad: ["left", "right", "up"], a: "DISPARAR" },
+  },
 };
 ```
+
+El `touch` replica los controles de teclado: una flecha por cada dirección que el juego usa, y A/B para las acciones (A es la principal). Mapeo actual: ROCAS ← → ↑ + A DISPARAR; CAÍDA ← → ↓ + A ROTAR + B CAÍDA; BLOQUE BUSTER ← → (más arrastre de pala con eventos `pointer` en el canvas); SERPENTINA y PAPILLA cruceta completa. `GamePlayer` pinta `TouchControls` y le pasa `disabled = paused || over`, con lo que pausar o terminar suelta todo lo mantenido.
 
 En `GamePlayer`: `const entry = GAME_REGISTRY[id]; const isReal = !!entry;` y sustituye cada `isRocas` por `isReal`. El bloque de simulación y su `game-arena` solo se renderizan si `!isReal`. El HUD oculta Vidas/Nivel según `entry.hud`. `isReal` también decide si `GUARDAR PUNTUACIÓN` llama a `saveScore`.
 
@@ -175,6 +214,8 @@ Si el bundle del motor es grande (Arkanoid con sprites), carga el motor con `nex
 - [ ] El canvas llega por parámetro; sin `canvas.width = …` fuera de la fábrica.
 - [ ] Un único `requestAnimationFrame` activo; `destroy()` lo cancela.
 - [ ] Todos los listeners en `window`/`document`/`canvas` se quitan en `destroy()`; las funciones están nombradas para poder quitarlas.
+- [ ] `setInput` implementado con el mismo efecto que cada tecla (ver §1), y `touch` en el registro con las mismas acciones. Probado con la emulación móvil de Playwright (`pointer: coarse`).
+- [ ] Si el juego usa el ratón sobre el canvas, escucha eventos `pointer` (`pointermove`/`pointerdown`), no `mouse*`, para que también funcione con el dedo.
 - [ ] `KeyboardEvent.code` en vez de `e.key`; `preventDefault` solo para teclas del juego y con foco fuera de campos editables.
 - [ ] Teclas de pausa del original (`P`, `Escape`): decide si se mantienen. La plataforma ya tiene `PAUSA`/`REANUDAR`; si se mantienen, deben avisar con un callback o `GameCallbacks` ampliado, o el HUD quedará desincronizado. Lo más simple es retirarlas.
 - [ ] El motor no dibuja su propio HUD (puntuación, vidas, nivel) ni su pantalla de game over; los pinta la plataforma. Los paneles auxiliares (p. ej. "siguiente pieza" de Tetris) pueden dibujarse dentro del mismo canvas si caben en el área lógica.
@@ -187,6 +228,8 @@ Si el bundle del motor es grande (Arkanoid con sprites), carga el motor con `nex
 - **Movimiento doble o más rápido tras recargar con HMR / Strict Mode**: un listener o loop no se limpió en `destroy()`.
 - **Espacio dispara el botón enfocado o desplaza la página**: falta `preventDefault`, o se llama aun escribiendo en el input del modal.
 - **Teclas "pegadas" al pausar o cambiar de pestaña**: falta `onBlur` que suelte el estado de teclas, o `clearKeys()` al pausar.
+- **Acción táctil pegada tras pausar o soltar fuera del botón**: `setInput(action, false)` no limpia el estado, o `pressed=false` se ignora en pausa (soltar siempre debe aplicarse).
+- **En Tetris, mantener ← en el móvil solo mueve una columna**: falta la autorrepetición propia de `setInput`; el teclado la recibe del sistema, el táctil no.
 - **Salto enorme tras reanudar**: no se repuso `last` en `resume()` ni se acotó `dt`.
 - **`onGameOver` dos veces**: `end()` desde el botón FIN más la muerte natural; protégelo con `over`.
 - **Canvas borroso o con proporciones erróneas**: el CSS no usa `width/height: 100%` sobre el contenedor 4:3, o la resolución lógica no coincide con la del original.

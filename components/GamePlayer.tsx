@@ -9,9 +9,14 @@ import {
 } from "react";
 import Link from "next/link";
 import GameCanvas from "@/components/GameCanvas";
+import TouchControls from "@/components/TouchControls";
 import { GAME_REGISTRY } from "@/components/games/registry";
 import { saveScore } from "@/app/juegos/[id]/jugar/actions";
-import type { GameCallbacks, GameEngine } from "@/lib/engine/types";
+import type {
+  GameCallbacks,
+  GameEngine,
+  TouchAction,
+} from "@/lib/engine/types";
 import { DEFAULT_SKIN, SKINS, type SkinId } from "@/lib/engine/skins";
 import {
   readSkin,
@@ -56,6 +61,10 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
     gameRef.current = game;
     game?.setMuted(mutedRef.current); // un motor nuevo hereda la preferencia actual
     game?.setSkin(skinRef.current);
+  }, []);
+  // Botones táctiles → motor; TouchControls ya suelta lo mantenido al pausar o terminar
+  const handleTouch = useCallback((action: TouchAction, pressed: boolean) => {
+    gameRef.current?.setInput(action, pressed);
   }, []);
   // Cambio de skin en caliente: el motor no se recrea y la partida sigue.
   useEffect(() => {
@@ -146,7 +155,7 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
   return (
     <div className="av-player fade-in">
       <div className="player-hud">
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        <div className="hud-stats">
           <div className="hud-stat">
             <div className="l">Jugador</div>
             <div className="v" style={{ color: "var(--ink)" }}>
@@ -279,6 +288,14 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
           <span>CARGA · 1MB</span>
         </div>
       </div>
+      {entry && (
+        <TouchControls
+          layout={entry.touch}
+          onInput={handleTouch}
+          muted={muted}
+          disabled={paused || over}
+        />
+      )}
       {over && (
         <div className="modal-bd">
           <div className="modal">

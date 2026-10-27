@@ -24,6 +24,9 @@ export const MIN_DROP_MS = 100; // ms
 export const SOFT_DROP_POINTS = 1; // por celda
 export const HARD_DROP_POINTS = 2; // por celda
 export const KICKS = [0, -1, 1, -2, 2];
+// Autorrepetición táctil de ← → ↓ (el teclado usa la del sistema)
+export const TOUCH_REPEAT_DELAY = 170; // ms hasta la primera repetición
+export const TOUCH_REPEAT_RATE = 50; // ms entre repeticiones
 // Índice = tipo de pieza (0 = vacío): I, O, T, S, Z, J, L, N (tuerca)
 export const PIECES: (number[][] | null)[] = [
   null,

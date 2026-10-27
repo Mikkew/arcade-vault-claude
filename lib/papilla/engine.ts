@@ -359,12 +359,16 @@ export const createPapillaGame: CreateEngine = (canvas, callbacks) => {
       step(STEP_MS);
     }
   };
+  const queueMove = (move: Move) => {
+    if (paused || over || s.phase !== "play") return;
+    if (s.input.length < MAX_INPUT_QUEUE) s.input.push(move);
+  };
   const onKeyDown = (e: KeyboardEvent) => {
     const move = KEY_MOVE[e.code];
     if (!move || isEditable(e.target)) return;
     e.preventDefault(); // evita el scroll de la página
-    if (paused || over || e.repeat || s.phase !== "play") return;
-    if (s.input.length < MAX_INPUT_QUEUE) s.input.push(move);
+    if (e.repeat) return;
+    queueMove(move);
   };
   const onBlur = () => {
     s.input = [];
@@ -743,6 +747,11 @@ export const createPapillaGame: CreateEngine = (canvas, callbacks) => {
       audio.setMuted(m);
     },
     setSkin() {}, // sin paletas todavía: tendrá su propio spec en specs/skins/
+    // Cada toque de la cruceta es un salto; soltar no hace nada
+    setInput(action, down) {
+      if (!down || action === "a" || action === "b") return;
+      queueMove(action);
+    },
     destroy() {
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);
