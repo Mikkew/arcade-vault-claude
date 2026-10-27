@@ -2,6 +2,7 @@
 // Independiente de React. Se comunica con el HUD de la plataforma por callbacks.
 import { drawScanlines, withGlow } from "@/lib/engine/skin-fx";
 import { DEFAULT_SKIN, type SkinId } from "@/lib/engine/skins";
+import type { TouchAction } from "@/lib/engine/types";
 import { createAudio } from "./audio";
 import { PALETTES } from "./palettes";
 import {
@@ -32,6 +33,13 @@ import {
 } from "./types";
 // Teclas que el motor captura mientras está activo
 const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "Space"]);
+// Cada acción táctil equivale a mantener una de esas teclas
+const TOUCH_KEYS: Partial<Record<TouchAction, string>> = {
+  left: "ArrowLeft",
+  right: "ArrowRight",
+  up: "ArrowUp",
+  a: "Space",
+};
 export function createAsteroidsGame(
   canvas: HTMLCanvasElement,
   callbacks: AsteroidsCallbacks,
@@ -323,6 +331,18 @@ export function createAsteroidsGame(
       pal = PALETTES[s] ?? PALETTES.clasico;
       // Sin bucle activo (en pausa) se redibuja un frame para que el cambio se vea
       if (!destroyed && rafId === null) draw();
+    },
+    setInput(action, down) {
+      const code = TOUCH_KEYS[action];
+      if (!code) return;
+      if (!down) {
+        keys[code] = false;
+        return;
+      }
+      if (paused || phase === "gameover") return;
+      // Igual que keydown: un solo disparo por pulsación aunque se mantenga
+      if (!keys[code]) justPressed[code] = true;
+      keys[code] = true;
     },
     destroy() {
       destroyed = true;

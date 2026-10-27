@@ -1,6 +1,6 @@
 # SKINS · SPEC 03 — Skins de SERPENTINA (clásico, neón y retro)
 
-> **Estado:** Approved
+> **Estado:** Implemented
 > **Depende de:** SPEC 09, skins/00-sistema-skins
 > **Fecha:** 2026-10-22
 > **Objetivo:** Que SERPENTINA ofrezca los skins `clasico`, `neon` y `retro`, todos con contraste medido sobre fondo oscuro, moviendo sus colores a `lib/serpentina/palettes.ts` y recoloreando el sprite de frutas en el propio canvas.

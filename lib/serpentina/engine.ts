@@ -135,15 +135,18 @@ export const createSerpentinaGame: CreateEngine = (canvas, callbacks, skin) => {
     callbacks.onScore(score);
     callbacks.onLevel?.(level);
   };
+  const turn = (wanted: Dir) => {
+    // Se compara con el último giro pendiente para poder encadenar dos giros rápidos
+    const ref = queue.length ? queue[queue.length - 1] : dir;
+    if (wanted === ref || wanted === OPPOSITE[ref]) return;
+    if (queue.length < MAX_INPUT_QUEUE) queue.push(wanted);
+  };
   const onKeyDown = (e: KeyboardEvent) => {
     const wanted = KEY_DIR[e.code];
     if (!wanted || isEditable(e.target)) return;
     e.preventDefault(); // evita el scroll de la página
     if (paused || over || e.repeat) return;
-    // Se compara con el último giro pendiente para poder encadenar dos giros rápidos
-    const ref = queue.length ? queue[queue.length - 1] : dir;
-    if (wanted === ref || wanted === OPPOSITE[ref]) return;
-    if (queue.length < MAX_INPUT_QUEUE) queue.push(wanted);
+    turn(wanted);
   };
   const onBlur = () => {
     queue = [];
@@ -341,6 +344,11 @@ export const createSerpentinaGame: CreateEngine = (canvas, callbacks, skin) => {
       if (destroyed) return;
       pal = PALETTES[s] ?? PALETTES.clasico;
       ensureStrip();
+    },
+    // Cada toque de la cruceta es un giro; soltar no hace nada
+    setInput(action, down) {
+      if (!down || paused || over || action === "a" || action === "b") return;
+      turn(action);
     },
     destroy() {
       destroyed = true;

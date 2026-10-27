@@ -2,7 +2,7 @@
 // Independiente de React. Se comunica con el HUD de la plataforma por callbacks.
 import { drawScanlines, withGlow } from "@/lib/engine/skin-fx";
 import { DEFAULT_SKIN } from "@/lib/engine/skins";
-import type { CreateEngine } from "@/lib/engine/types";
+import type { CreateEngine, TouchAction } from "@/lib/engine/types";
 import { LEVELS } from "./levels";
 import { PALETTES } from "./palettes";
 import {
@@ -41,6 +41,11 @@ import {
 } from "./types";
 // Teclas que el motor captura mientras está activo
 const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight"]);
+// Cada acción táctil equivale a mantener una de esas teclas
+const TOUCH_KEYS: Partial<Record<TouchAction, "ArrowLeft" | "ArrowRight">> = {
+  left: "ArrowLeft",
+  right: "ArrowRight",
+};
 const collideAABB = (a: Rect, b: Rect) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 export const createBloqueBusterGame: CreateEngine = (
@@ -144,13 +149,14 @@ export const createBloqueBusterGame: CreateEngine = (
     if (GAME_KEYS.has(e.code)) keys[e.code as keyof typeof keys] = false;
   };
   const onBlur = () => clearKeys();
-  const onMouseMove = (e: MouseEvent) => {
+  // Ratón, lápiz o dedo: pointerdown coloca la pala al tocar y pointermove la arrastra
+  const onPointer = (e: PointerEvent) => {
     if (paused || over) return;
     // El canvas se escala por CSS: convierte a coordenadas lógicas
     const rect = canvas.getBoundingClientRect();
     if (rect.width === 0) return;
-    const mouseX = ((e.clientX - rect.left) * W) / rect.width;
-    paddle.x = Math.max(0, Math.min(W - paddle.w, mouseX - paddle.w / 2));
+    const pointerX = ((e.clientX - rect.left) * W) / rect.width;
+    paddle.x = Math.max(0, Math.min(W - paddle.w, pointerX - paddle.w / 2));
   };
   const update = (dt: number) => {
     if (!ready) return;
@@ -384,7 +390,8 @@ export const createBloqueBusterGame: CreateEngine = (
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
   window.addEventListener("blur", onBlur);
-  canvas.addEventListener("mousemove", onMouseMove);
+  canvas.addEventListener("pointermove", onPointer);
+  canvas.addEventListener("pointerdown", onPointer);
   reset();
   last = performance.now();
   raf = requestAnimationFrame(frame);
@@ -414,13 +421,20 @@ export const createBloqueBusterGame: CreateEngine = (
       if (destroyed) return;
       pal = PALETTES[s] ?? PALETTES.clasico;
     },
+    setInput(action, down) {
+      const code = TOUCH_KEYS[action];
+      if (!code) return;
+      if (down && (paused || over)) return;
+      keys[code] = down;
+    },
     destroy() {
       destroyed = true;
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
-      canvas.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("pointermove", onPointer);
+      canvas.removeEventListener("pointerdown", onPointer);
       img.onload = null;
       img.onerror = null;
     },

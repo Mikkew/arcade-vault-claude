@@ -1,6 +1,6 @@
 // ===== engine.ts — bucle, estado, entrada y dibujo de Caída (Tetris) =====
 // Independiente de React. Se comunica con el HUD de la plataforma por callbacks.
-import type { CreateEngine } from "@/lib/engine/types";
+import type { CreateEngine, TouchAction } from "@/lib/engine/types";
 import {
   BASE_DROP_MS,
   BLOCK,
@@ -23,6 +23,8 @@ import {
   PIECES,
   ROWS,
   SOFT_DROP_POINTS,
+  TOUCH_REPEAT_DELAY,
+  TOUCH_REPEAT_RATE,
   VALUE_COLOR,
   W,
   type Board,
@@ -95,6 +97,7 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
   const endGame = () => {
     if (over) return;
     over = true;
+    stopRepeat();
     callbacks.onGameOver(score);
   };
   const tryRotate = () => {
@@ -175,16 +178,51 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
       target instanceof HTMLInputElement ||
       target instanceof HTMLTextAreaElement ||
       target instanceof HTMLSelectElement);
+  const moveBy = (dx: number) => {
+    if (!collide(current.shape, current.x + dx, current.y)) current.x += dx;
+  };
+  // ── Entrada táctil: ← → ↓ repiten mientras se mantienen, A y B no ──
+  let repeatAction: TouchAction | null = null;
+  let repeatTimer: ReturnType<typeof setTimeout> | null = null;
+  function stopRepeat() {
+    if (repeatTimer !== null) clearTimeout(repeatTimer);
+    repeatTimer = null;
+    repeatAction = null;
+  }
+  const touchStep = (action: TouchAction) => {
+    switch (action) {
+      case "left":
+        moveBy(-1);
+        break;
+      case "right":
+        moveBy(1);
+        break;
+      case "down":
+        softDrop();
+        break;
+      case "a":
+        tryRotate();
+        break;
+      case "b":
+        hardDrop();
+        break;
+    }
+  };
+  const repeatTick = () => {
+    if (!repeatAction || paused || over) return stopRepeat();
+    touchStep(repeatAction);
+    repeatTimer = setTimeout(repeatTick, TOUCH_REPEAT_RATE);
+  };
   const onKeyDown = (e: KeyboardEvent) => {
     if (!GAME_KEYS.has(e.code) || isEditable(e.target)) return;
     e.preventDefault(); // evita scroll y que Espacio active un botón enfocado
     if (paused || over) return;
     switch (e.code) {
       case "ArrowLeft":
-        if (!collide(current.shape, current.x - 1, current.y)) current.x--;
+        moveBy(-1);
         break;
       case "ArrowRight":
-        if (!collide(current.shape, current.x + 1, current.y)) current.x++;
+        moveBy(1);
         break;
       case "ArrowDown":
         softDrop();
@@ -306,6 +344,7 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
   return {
     pause() {
       paused = true;
+      stopRepeat();
     },
     resume() {
       paused = false;
@@ -313,6 +352,7 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
     },
     end: endGame,
     restart() {
+      stopRepeat();
       over = false;
       paused = false;
       reset();
@@ -320,7 +360,21 @@ export const createCaidaGame: CreateEngine = (canvas, callbacks) => {
     },
     setMuted() {}, // sin sonido
     setSkin() {}, // sin paletas todavía: tendrá su propio spec en specs/skins/
+    setInput(action, down) {
+      if (!down) {
+        if (action === repeatAction) stopRepeat();
+        return;
+      }
+      if (paused || over) return;
+      touchStep(action);
+      if (action === "left" || action === "right" || action === "down") {
+        stopRepeat(); // solo repite la última acción pulsada, como el teclado
+        repeatAction = action;
+        repeatTimer = setTimeout(repeatTick, TOUCH_REPEAT_DELAY);
+      }
+    },
     destroy() {
+      stopRepeat();
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);
     },

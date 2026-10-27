@@ -199,6 +199,8 @@ a { color: inherit; text-decoration: none; }
   .av-nav .links { display: none; }
   .av-nav .coin-counter { display: none; }
   .av-nav .hamburger { display: inline-flex; }
+  /* el usuario y SALIR ya están en el panel móvil; en la barra desbordaban a 360px */
+  .av-nav .user-box { display: none; }
 }
 
 .av-mobile-panel {
@@ -738,6 +740,125 @@ a { color: inherit; text-decoration: none; }
 .crt-bottom .led::before {
   content: ""; width: 8px; height: 8px; border-radius: 50%;
   background: var(--green); box-shadow: 0 0 6px var(--green);
+}
+
+/* ===== MANDO TÁCTIL (spec 10) =====
+   Mitad inferior de una portátil: la carcasa continúa la del CRT. Cruceta en
+   cruz de chaflanes a la izquierda, botones de arcade A/B en diagonal a la
+   derecha. Solo existe con puntero grueso; en escritorio no ocupa sitio. */
+.crt, .touch-pad {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.touch-pad {
+  --cell: clamp(48px, 14vw, 60px);
+  --cap: clamp(56px, 16vw, 72px);
+  display: none;
+  align-items: center; justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 18px clamp(14px, 4vw, 28px) 22px;
+  border-radius: 18px 18px 28px 28px;
+  background: #050507;
+  box-shadow: 0 0 0 6px #1b1b22, 0 0 0 7px #2a2a35;
+  transition: opacity 160ms ease;
+}
+@media (pointer: coarse) { .touch-pad { display: flex; } }
+/* sin A/B (Serpentina, Papilla, Bloque Buster) la cruceta va al centro */
+.touch-pad:has(> .touch-dpad:only-child) { justify-content: center; }
+.touch-pad[data-disabled] { opacity: 0.4; }
+.touch-btn {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--cyan);
+  font-family: var(--pixel);
+  cursor: pointer;
+}
+/* cruceta: rejilla 3×3; las filas sin flecha colapsan (← → queda en barra) */
+.touch-dpad {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, var(--cell));
+  grid-template-rows: repeat(3, auto);
+  grid-template-areas: ". up ." "left hub right" ". down .";
+}
+.touch-dpad::before {
+  content: "";
+  grid-area: hub;
+  width: var(--cell); height: var(--cell);
+  background: #0d0d14;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.touch-btn.dir {
+  width: var(--cell); height: var(--cell);
+  background: #0d0d14;
+  box-shadow: inset 0 0 0 1px var(--cyan), inset 0 0 10px rgba(0,245,255,0.18);
+}
+/* flecha triangular; cada dirección solo la gira */
+.touch-btn.dir::after {
+  content: "";
+  width: 36%; height: 30%;
+  background: currentColor;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  filter: drop-shadow(0 0 4px rgba(0,245,255,0.6));
+}
+.touch-btn.down::after { transform: rotate(180deg); }
+.touch-btn.left::after { transform: rotate(-90deg); }
+.touch-btn.right::after { transform: rotate(90deg); }
+.touch-btn.up { grid-area: up; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%, 0 10px); }
+.touch-btn.down { grid-area: down; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px)); }
+.touch-btn.left { grid-area: left; clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px), 0 10px); }
+.touch-btn.right { grid-area: right; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
+.touch-btn.dir[data-pressed] {
+  color: #050507;
+  background: var(--cyan);
+  box-shadow: 0 0 18px rgba(0,245,255,0.7);
+}
+.touch-btn.dir[data-pressed]::after { filter: none; }
+/* A y B: botones de arcade redondos con la etiqueta debajo; A más alto, como en una portátil */
+.touch-actions {
+  display: flex; align-items: flex-end; gap: 12px;
+}
+.touch-btn.act {
+  flex-direction: column; gap: 8px;
+  font-size: 7px; letter-spacing: 0.12em;
+  color: var(--ink-dim);
+}
+.touch-btn.act .cap {
+  width: var(--cap); height: var(--cap);
+  border-radius: 50%;
+  border: 2px solid var(--btn);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--btn) 35%, transparent), transparent 65%), #0d0d14;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--btn) 45%, #050507), 0 0 12px color-mix(in srgb, var(--btn) 35%, transparent);
+  transition: transform 60ms ease, box-shadow 60ms ease;
+}
+.touch-btn.a { --btn: var(--magenta); margin-bottom: calc(var(--cap) * 0.45); }
+.touch-btn.b { --btn: var(--yellow); }
+.touch-btn.act[data-pressed] { color: var(--ink); }
+.touch-btn.act[data-pressed] .cap {
+  transform: translateY(4px);
+  background: var(--btn);
+  box-shadow: 0 0 0 transparent, 0 0 22px var(--btn);
+}
+@media (prefers-reduced-motion: reduce) {
+  .touch-btn.act .cap, .touch-pad { transition: none; }
+}
+/* HUD compacto: en un móvil vertical las estadísticas y los botones se reparten en filas */
+.hud-stats { display: flex; gap: 24px; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .player-hud { padding: 12px; gap: 12px; }
+  .hud-stats { gap: 12px 18px; }
+  .hud-stat .v { font-size: 13px; }
+  .hud-actions { flex-wrap: wrap; gap: 8px; width: 100%; }
+  .hud-actions .btn { flex: 1 1 auto; padding: 10px 12px; font-size: 8px; letter-spacing: 0.12em; }
+  .skin-picker { flex-wrap: wrap; }
+  .crt { padding: 10px; border-radius: 18px; }
+  .crt-bottom { gap: 8px; font-size: 6px; letter-spacing: 0.1em; }
 }
 
 /* fake in-screen game */
