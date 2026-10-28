@@ -2,6 +2,7 @@ import { createAsteroidsGame } from "@/lib/asteroids/engine";
 import { createBloqueBusterGame } from "@/lib/bloque-buster/engine";
 import { createCaidaGame } from "@/lib/caida/engine";
 import { createPapillaGame } from "@/lib/papilla/engine";
+import { createRanariaGame } from "@/lib/ranaria/engine";
 import { createSerpentinaGame } from "@/lib/serpentina/engine";
 import type { SkinId } from "@/lib/engine/skins";
 import type { CreateEngine, TouchAction } from "@/lib/engine/types";
@@ -61,6 +62,15 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   papilla: {
     createEngine: createPapillaGame,
     label: "Juego Papilla",
+    hud: { lives: true, level: true },
+    sound: true,
+    controls: "← ↑ ↓ → / WASD SALTAR",
+    skins: ["clasico"],
+    touch: { dpad: ["up", "down", "left", "right"] },
+  },
+  ranaria: {
+    createEngine: createRanariaGame,
+    label: "Juego Ranaria",
     hud: { lives: true, level: true },
     sound: true,
     controls: "← ↑ ↓ → / WASD SALTAR",

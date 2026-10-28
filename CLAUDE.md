@@ -82,7 +82,7 @@ Never use `SUPABASE_SERVICE_ROLE_KEY`.
 
 Usa siempre /frontend-design para diseñar la interfaz de usuario.
 
-Project skills live in `.agents/skills/` (`arcade-game`, `spec`, `spec-impl`, plus the Supabase ones) and are symlinked into `.claude/skills/`. Third-party ones are pinned in `skills-lock.json`.
+Project skills live in `.agents/skills/` (`arcade-game`, `spec`, `spec-impl`, `spec-impl-game`, plus the Supabase ones) and are symlinked into `.claude/skills/`. Third-party ones are pinned in `skills-lock.json`.
 
 - `/arcade-game <id | references folder | description>` (project-authored): creates or ports a game as an engine that follows the contract above, registers it, and connects it to scores and the leaderboard. Use it whenever a game is added, ported or turned from a simulation into a real game. Its references cover the engine contract, the leaderboard foundation and notes on each reference game. Game branches are named after the spec or `game-<id>`.
 - `supabase` and `supabase-postgres-best-practices` (from `supabase/agent-skills`): load them before any Supabase or Postgres work. The Supabase MCP server is configured in `.mcp.json` for this project.
@@ -98,5 +98,6 @@ Project skills live in `.agents/skills/` (`arcade-game`, `spec`, `spec-impl`, pl
 
 - `/spec <feature>` designs a spec through clarifying questions and saves it to `specs/` (numbered `NN-name`, with an `> **Estado:**` line). It does not write code.
 - `/spec-impl <NN-spec-name>` implements a spec whose status is "Approved". It creates and switches to a branch named after the spec (unless `specs/.spec-config.yml` sets `AutoCreateBranch: false`), then implements step by step, pausing for diff review.
+- `/spec-impl-game <NN-spec-name | game-jam/<id>/NN-name>` is `/spec-impl` for game specs: it reads `spec-impl`'s SKILL.md and runs the same phases (it also finds specs in subfolders, and `specs/game-jam/<id>/` specs use the `game-<id>` branch). After the last step it runs `skin-designer` and, once that finishes, `mobile-porter` on the new game. Both only write Draft specs.
 
 New features are expected to go through `/spec` and then `/spec-impl`. When a spec exists for the work, follow it. Work happens on branches and merges into `main` through PRs; never commit features straight to `main`.
