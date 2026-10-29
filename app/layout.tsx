@@ -6,7 +6,7 @@ import {
 } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
-import { getCurrentProfile } from "@/lib/auth";
+import { getAuthStatus } from "@/lib/auth";
 import "./globals.css";
 const pressStart = Press_Start_2P({
   variable: "--font-press-start-2p",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     "Portal retro de juegos arcade con leaderboards y salón de la fama.",
 };
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const profile = await getCurrentProfile();
+  const auth = await getAuthStatus();
   return (
     <html
       lang="es"
@@ -39,7 +39,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <div className="av-bg" />
         <div className="av-noise" />
         <div className="av-root">
-          <Nav profile={profile} />
+          <Nav auth={auth} />
           <main className="av-main">{children}</main>
           <Footer />
         </div>

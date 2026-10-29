@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { getAuthStatus } from "@/lib/auth";
 import { getGame } from "@/lib/games-repo";
 import { createClient } from "@/lib/supabase/server";
 export type SaveScoreResult =
@@ -21,10 +22,9 @@ export async function saveScore(
   ) {
     return { ok: false, reason: "invalid" };
   }
-  const supabase = await createClient();
-  // getClaims() valida la firma del token; getSession() no es fiable en el servidor.
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims.sub) return { ok: false, reason: "unauthenticated" };
+  // Sin sesión o sin perfil (OAuth sin username, spec 11) no se guarda.
+  const auth = await getAuthStatus();
+  if (auth.status !== "ready") return { ok: false, reason: "unauthenticated" };
   let game;
   try {
     game = await getGame(gameId);
@@ -33,6 +33,7 @@ export async function saveScore(
     return { ok: false, reason: "error" };
   }
   if (!game) return { ok: false, reason: "invalid" };
+  const supabase = await createClient();
   const { error } = await supabase
     .from("scores")
     .insert({ game_id: gameId, score });
