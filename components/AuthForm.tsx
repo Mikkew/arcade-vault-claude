@@ -1,12 +1,13 @@
 "use client";
-
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signIn, signUp, type AuthState } from "@/app/acceso/actions";
-
+import {
+  signIn,
+  signInWithProvider,
+  signUp,
+  type AuthState,
+} from "@/app/acceso/actions";
 const initialState: AuthState = { status: "idle" };
-
 function ErrorLine({ state }: { state: AuthState }) {
   if (state.status !== "error") return null;
   return (
@@ -15,13 +16,12 @@ function ErrorLine({ state }: { state: AuthState }) {
     </div>
   );
 }
-
-function SignInForm() {
+function SignInForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState(signIn, initialState);
   const email = state.status === "error" ? state.values.email : "";
-
   return (
     <form action={formAction} noValidate>
+      <input type="hidden" name="next" value={next} />
       <div className="field">
         <label htmlFor="in-email">Correo electrónico</label>
         <input
@@ -46,9 +46,7 @@ function SignInForm() {
           required
         />
       </div>
-
       <ErrorLine state={state} />
-
       <button
         className="btn lg"
         type="submit"
@@ -57,7 +55,6 @@ function SignInForm() {
       >
         {pending ? "ENTRANDO…" : "ENTRAR AL VAULT"}
       </button>
-
       <div style={{ marginTop: 12, textAlign: "center" }}>
         <Link
           href="/acceso/recuperar"
@@ -74,14 +71,13 @@ function SignInForm() {
     </form>
   );
 }
-
-function SignUpForm() {
+function SignUpForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState(signUp, initialState);
   const values =
     state.status === "error" ? state.values : { username: "", email: "" };
-
   return (
     <form action={formAction} noValidate>
+      <input type="hidden" name="next" value={next} />
       <div className="field">
         <label htmlFor="up-username">Usuario</label>
         <input
@@ -121,9 +117,7 @@ function SignUpForm() {
           required
         />
       </div>
-
       <ErrorLine state={state} />
-
       <button
         className="btn lg"
         type="submit"
@@ -135,11 +129,14 @@ function SignUpForm() {
     </form>
   );
 }
-
-export default function AuthForm() {
-  const router = useRouter();
+export default function AuthForm({
+  next,
+  oauthError = false,
+}: {
+  next: string;
+  oauthError?: boolean;
+}) {
   const [tab, setTab] = useState<"in" | "up">("in");
-
   return (
     <div className="auth-card">
       <div className="auth-header">
@@ -157,7 +154,6 @@ export default function AuthForm() {
           ACCESO AL SISTEMA · v2.6
         </div>
       </div>
-
       <div className="auth-tabs">
         <button
           type="button"
@@ -174,28 +170,34 @@ export default function AuthForm() {
           CREAR CUENTA
         </button>
       </div>
-
-      {tab === "in" ? <SignInForm /> : <SignUpForm />}
-
-      <button
-        type="button"
-        className="btn ghost"
-        style={{ width: "100%", marginTop: 10 }}
-        onClick={() => router.push("/")}
-      >
-        JUGAR COMO INVITADO
-      </button>
-
+      {tab === "in" ? <SignInForm next={next} /> : <SignUpForm next={next} />}
       <div className="auth-divider">O CONTINÚA CON</div>
-      <div className="social">
-        <button className="btn ghost" type="button">
+      {/* El botón pulsado envía provider; el retorno pasa por /auth/callback (spec 11). */}
+      <form action={signInWithProvider} className="social">
+        <input type="hidden" name="next" value={next} />
+        <button
+          className="btn ghost"
+          type="submit"
+          name="provider"
+          value="google"
+        >
           ◆&nbsp; GOOGLE
         </button>
-        <button className="btn ghost" type="button">
+        <button
+          className="btn ghost"
+          type="submit"
+          name="provider"
+          value="github"
+        >
           ▣&nbsp; GITHUB
         </button>
-      </div>
-
+      </form>
+      {oauthError && (
+        <div className="terminal-error" role="alert" style={{ marginTop: 10 }}>
+          <span className="prompt">vault@arcade:~$</span> ERROR: NO SE PUDO
+          ENTRAR CON EL PROVEEDOR. INTÉNTALO DE NUEVO O USA TU CORREO.
+        </div>
+      )}
       <div
         style={{
           marginTop: 18,

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { notFound, unstable_rethrow } from "next/navigation";
+import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import CatalogError from "@/components/CatalogError";
 import GamePlayer from "@/components/GamePlayer";
-import { getCurrentProfile } from "@/lib/auth";
+import { getAuthStatus } from "@/lib/auth";
 import type { Game } from "@/lib/games";
 import { getGame } from "@/lib/games-repo";
 export async function generateMetadata({
@@ -35,8 +35,12 @@ export default async function JugarPage({
     return <CatalogError />;
   }
   if (!game) notFound();
-  const profile = await getCurrentProfile();
-  return (
-    <GamePlayer id={game.id} title={game.title} isLoggedIn={profile !== null} />
-  );
+  // Jugar exige sesión con perfil (spec 11): después se vuelve a este juego.
+  const auth = await getAuthStatus();
+  const next = encodeURIComponent(`/juegos/${game.id}/jugar`);
+  if (auth.status === "anon") redirect(`/acceso?next=${next}`);
+  if (auth.status === "needs-username") {
+    redirect(`/acceso/usuario?next=${next}`);
+  }
+  return <GamePlayer id={game.id} title={game.title} />;
 }

@@ -1,6 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAuthStatus } from "@/lib/auth";
+import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 export type AuthState =
   | { status: "idle" }
@@ -69,7 +71,8 @@ export async function signUp(
     );
   }
   revalidatePath("/", "layout");
-  redirect("/juegos");
+  // Vuelve a la página que pidió el login (?next=), validada contra redirecciones abiertas.
+  redirect(safeNext(field(formData, "next")));
 }
 export async function signIn(
   _prev: AuthState,
@@ -91,7 +94,76 @@ export async function signIn(
     return fail("ERROR: CORREO O CONTRASEÑA INCORRECTOS.");
   }
   revalidatePath("/", "layout");
-  redirect("/juegos");
+  redirect(safeNext(field(formData, "next")));
+}
+const OAUTH_PROVIDERS = ["github", "google"] as const;
+type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+const isOAuthProvider = (value: string): value is OAuthProvider =>
+  (OAUTH_PROVIDERS as readonly string[]).includes(value);
+// GitHub o Google (spec 11). El proveedor llega del botón pulsado (name="provider").
+// Flujo PKCE: el verificador queda en una cookie y /auth/callback canjea el código.
+export async function signInWithProvider(formData: FormData): Promise<void> {
+  const provider = field(formData, "provider");
+  const next = safeNext(field(formData, "next"));
+  const back = `/acceso?error=oauth&next=${encodeURIComponent(next)}`;
+  if (!isOAuthProvider(provider)) redirect(back);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl) {
+    console.error(
+      "[auth] Falta NEXT_PUBLIC_SITE_URL para construir la URL de retorno de OAuth.",
+    );
+    redirect(back);
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${siteUrl}/auth/callback?flow=oauth&next=${encodeURIComponent(next)}`,
+    },
+  });
+  if (error || !data.url) {
+    console.error(
+      `[auth] signInWithOAuth(${provider}) falló: ${error?.code ?? error?.name} ${error?.message}`,
+    );
+    redirect(back);
+  }
+  redirect(data.url);
+}
+// Primer acceso con OAuth: crea el perfil con el username elegido (spec 11).
+export async function claimUsername(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const values = { username: field(formData, "username").trim(), email: "" };
+  const next = safeNext(field(formData, "next"));
+  const fail = failWith(values);
+  if (!USERNAME_RE.test(values.username)) {
+    return fail(
+      "ERROR: EL USUARIO DEBE TENER 3-16 CARACTERES (LETRAS, NÚMEROS Y _).",
+    );
+  }
+  const auth = await getAuthStatus();
+  if (auth.status === "anon") {
+    return fail("ERROR: TU SESIÓN HA CADUCADO. VUELVE A ENTRAR.");
+  }
+  // Ya tiene perfil (otra pestaña, o volvió atrás): no hay nada que reclamar.
+  if (auth.status === "ready") redirect(next);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("claim_username", {
+    p_username: values.username,
+  });
+  if (error) {
+    // 23505: el nombre ya existe (unique) o el perfil se creó en otra pestaña.
+    if (error.code === "23505") {
+      return fail("ERROR: ESE USUARIO YA ESTÁ COGIDO. PRUEBA OTRO.");
+    }
+    console.error(
+      `[auth] claim_username falló: ${error.code ?? error.name} ${error.message}`,
+    );
+    return fail("ERROR: NO SE PUDO GUARDAR EL USUARIO. INTÉNTALO DE NUEVO.");
+  }
+  revalidatePath("/", "layout");
+  redirect(next);
 }
 export async function signOut(): Promise<void> {
   const supabase = await createClient();

@@ -3,8 +3,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/acceso/actions";
-import type { Profile } from "@/lib/auth";
-export default function Nav({ profile }: { profile: Profile | null }) {
+import type { AuthStatus } from "@/lib/auth";
+export default function Nav({ auth }: { auth: AuthStatus }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const isInicio = pathname === "/";
@@ -41,11 +41,21 @@ export default function Nav({ profile }: { profile: Profile | null }) {
           <span className="coin"></span>
           <span>CRÉDITOS · 03</span>
         </div>
-        {profile ? (
+        {auth.status === "ready" ? (
           <form action={signOut} className="user-box">
-            <span className="user-name" title={profile.username}>
-              {profile.username}
+            <span className="user-name" title={auth.profile.username}>
+              {auth.profile.username}
             </span>
+            <button type="submit" className="btn ghost">
+              SALIR
+            </button>
+          </form>
+        ) : auth.status === "needs-username" ? (
+          // Sesión OAuth sin perfil todavía (spec 11).
+          <form action={signOut} className="user-box">
+            <Link href="/acceso/usuario" className="btn yellow">
+              ELIGE USUARIO
+            </Link>
             <button type="submit" className="btn ghost">
               SALIR
             </button>
@@ -91,9 +101,18 @@ export default function Nav({ profile }: { profile: Profile | null }) {
         <Link href="/about" className={isAbout ? "active" : ""} onClick={close}>
           Acerca de
         </Link>
-        {profile ? (
+        {auth.status === "ready" ? (
           <form action={signOut} className="user-box">
-            <span className="user-name">{profile.username}</span>
+            <span className="user-name">{auth.profile.username}</span>
+            <button type="submit" className="btn ghost">
+              SALIR
+            </button>
+          </form>
+        ) : auth.status === "needs-username" ? (
+          <form action={signOut} className="user-box">
+            <Link href="/acceso/usuario" onClick={close}>
+              Elige usuario
+            </Link>
             <button type="submit" className="btn ghost">
               SALIR
             </button>

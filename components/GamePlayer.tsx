@@ -26,12 +26,11 @@ import {
 interface GamePlayerProps {
   id: string;
   title: string;
-  isLoggedIn: boolean;
 }
 type SaveStatus = "idle" | "saving" | "saved" | "error" | "unauthenticated";
 // Las simulaciones no tienen skins: solo el clásico.
 const NO_SKINS: SkinId[] = [DEFAULT_SKIN];
-export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
+export default function GamePlayer({ id, title }: GamePlayerProps) {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
@@ -304,9 +303,12 @@ export default function GamePlayer({ id, title, isLoggedIn }: GamePlayerProps) {
             <div className="final">{score.toLocaleString("es-ES")}</div>
             {saveStatus === "saved" ? (
               <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
-            ) : isReal && (!isLoggedIn || saveStatus === "unauthenticated") ? (
+            ) : isReal && saveStatus === "unauthenticated" ? (
               <div className="input-row">
-                <Link href="/acceso" className="btn yellow">
+                <Link
+                  href={`/acceso?next=${encodeURIComponent(`/juegos/${id}/jugar`)}`}
+                  className="btn yellow"
+                >
                   INICIA SESIÓN PARA GUARDAR
                 </Link>
               </div>
